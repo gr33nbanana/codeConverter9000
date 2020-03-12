@@ -85,6 +85,8 @@ def checkForDifference():
         #sp.call("diff -B -Z " + fileOne + " " + fileTwo + " > ./Diff/ " + outputFileName, shell = True)
         sp.call(shellArgument, shell = True)
 
+#Make gathering O files have arguments for the format so that the same function is called before and after formatting but with different format arguments
+
 
 #runMakeCleanBuilt()
 #gatherOldDumpedOFiles()
