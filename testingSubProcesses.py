@@ -71,10 +71,12 @@ def gatherNewDumpedOFiles():
 
 def checkForDifference():
     sp.call("mkdir -p ./Diff", shell = True)
+    print("CHECKING DIFFERENCES")
 
-    for fileRefOne, fileRefTwo in zip( pathlib.Path('.').glob("*.f.asm"), pathlib.Path('.').glob("*.f90.asm") ):
-        fileOne = str(fileRefOne)
-        fileTwo = str(fileRefTwo)
+    for fileRefOne, fileRefTwo in zip( pathlib.Path('./DumpedFiles/').glob("*.f.asm"), pathlib.Path('./DumpedFiles/').glob("*.f90.asm") ):
+        fileOne = "./" + str(fileRefOne)
+        fileTwo = "./" + str(fileRefTwo)
+
         fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
         fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
 
@@ -93,9 +95,9 @@ def checkForDifference():
             print("DIFFERENCE IN " + fileOneName + " AND " + fileTwoName)
             sp.call(shellArgument + saveShellArgument ,shell = True)
 
-    for fileRefOne, fileRefTwo in zip( pathlib.Path('.').glob("*.f.txt"), pathlib.Path('.').glob("*.f90.txt") ):
-        fileOne = str(fileRefOne)
-        fileTwo = str(fileRefTwo)
+    for fileRefOne, fileRefTwo in zip( pathlib.Path('./DumpedFiles/').glob("*.f.txt"), pathlib.Path('./DumpedFiles/').glob("*.f90.txt") ):
+        fileOne = "./" + str(fileRefOne)
+        fileTwo = "./" + str(fileRefTwo)
         fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
         fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
 
@@ -117,12 +119,12 @@ def checkForDifference():
 #Make gathering O files have arguments for the format so that the same function is called before and after formatting but with different format arguments
 
 
-runMakeCleanBuilt()
-gatherOldDumpedOFiles()
+#runMakeCleanBuilt()
+#gatherOldDumpedOFiles()
 
-filterForType()
+#filterForType()
 
-runMakeCleanBuilt()
-gatherNewDumpedOFiles()
+#runMakeCleanBuilt()
+#gatherNewDumpedOFiles()
 
 checkForDifference()
