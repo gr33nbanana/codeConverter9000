@@ -4,8 +4,8 @@ import os
 import pathlib
 
 def filterForType(location = str( input("Enter full path to look in:\n") ),
-fileType = str( input("Enter filetype to look for:\n") ),
-subFolders = input("Should subfolders be included?") ):
+ fileType = str( input("Enter filetype to look for:\n") ),
+ subFolders = input("Should subfolders be included?") ):
   output = sp.getoutput('dir -1 %s %s' %(location, subFolders))
   globArgument = '*.%s'%fileType
   doRecursive = False
@@ -25,7 +25,6 @@ subFolders = input("Should subfolders be included?") ):
     outPutName = fileName[: - len(fileType)]
     outPutName = outPutName.__add__('f90')
     findentArg = "findent -ofree < {0} > {1} ".format(fileName, outPutName)
-    removeArg = 'rm ' + fileName
 
     try:
         print(findentArg)
@@ -37,8 +36,6 @@ subFolders = input("Should subfolders be included?") ):
         os.remove(fileName)
     except:
         print("Error while deleting file: " + fileName)
-
-
 
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
 
@@ -55,47 +52,77 @@ def gatherOldDumpedOFiles():
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
         # fileName[fileName.rfind('/') + 1 : ] gives the string after the last occurance of '/' which is the name of the .o file so that it prints in the DumpedFiles directory
-        print("objdump -d " + fileName + " > " + "/DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.asm")
+        shellArgument = "objdump -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.asm"
 
-        sp.call("objdump -d " + fileName + " > " + "/DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.asm", shell = True)
-        sp.call("strings -d " + fileName + " > " + "/DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.txt", shell = True)
+        print(shellArgument)
+        sp.call(shellArgument, shell = True)
+
+        sp.call("strings -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.txt", shell = True)
 
 def gatherNewDumpedOFiles():
     sp.call("mkdir -p ./DumpedFiles", shell = True)
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
-        print("objdump -d " + fileName + " > " + "/DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.asm")
+        shellArgument = "objdump -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.asm"
+        print(shellArgument)
 
-        sp.call("objdump -d " + fileName + " > " + "/DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.asm", shell = True)
-        sp.call("strings -d " + fileName + " > " + "/DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.txt", shell = True)
+        sp.call(shellArgument, shell = True)
+        sp.call("strings -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.txt", shell = True)
 
 def checkForDifference():
-    #sp.call("mkdir -p ./Diff", shell = True)
+    sp.call("mkdir -p ./Diff", shell = True)
 
     for fileRefOne, fileRefTwo in zip( pathlib.Path('.').glob("*.f.asm"), pathlib.Path('.').glob("*.f90.asm") ):
         fileOne = str(fileRefOne)
         fileTwo = str(fileRefTwo)
         fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
         fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
-        outputFileName = ("difference_" + fileOneName + "__" + fileTwoName).replace('.', '')
+
+        outputFileName = ("difference_ASSEMBLY__" + fileOneName + "__" + fileTwoName).replace('.', '')
         outputFileName = outputFileName + ".txt"
-        shellArgument = "diff -B -Z " + fileOne + " " + fileTwo + " > ./Diff/" + outputFileName
+
+        shellArgument = "diff -B -Z " + fileOne + " " + fileTwo
+        saveShellArgument = " > ./Diff/" + outputFileName
 
         print(shellArgument)
-        #sp.call("diff -B -Z " + fileOne + " " + fileTwo + " > ./Diff/ " + outputFileName, shell = True)
-        sp.call(shellArgument, shell = True)
+        #save the output of diff to see if its empty or not
+        #sp.call apperently returns an integer which is 0 if the difference is empty
+        difference = sp.call(shellArgument, shell = True)
+
+        if difference != 0:
+            print("DIFFERENCE IN " + fileOneName + " AND " + fileTwoName)
+            sp.call(shellArgument + saveShellArgument ,shell = True)
+
+    for fileRefOne, fileRefTwo in zip( pathlib.Path('.').glob("*.f.txt"), pathlib.Path('.').glob("*.f90.txt") ):
+        fileOne = str(fileRefOne)
+        fileTwo = str(fileRefTwo)
+        fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
+        fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
+
+        outputFileName = ("difference_STRINGS__" + fileOneName + "__" + fileTwoName).replace('.', '')
+        outputFileName = outputFileName + ".txt"
+        shellArgument = "diff -B -Z " + fileOne + " " + fileTwo
+        saveShellArgument = " > ./Diff/" + outputFileName
+
+        print(shellArgument)
+        #save the output of diff to see if its empty or not
+        #sp.call apperently returns an integer which is 0 if the difference is empty
+        difference = sp.call(shellArgument, shell = True)
+
+        if difference != 0:
+            print("DIFFERENCE IN " + fileOneName + " AND " + fileTwoName)
+            sp.call(shellArgument + saveShellArgument ,shell = True)
+
 
 #Make gathering O files have arguments for the format so that the same function is called before and after formatting but with different format arguments
 
 
-#runMakeCleanBuilt()
-#gatherOldDumpedOFiles()
+runMakeCleanBuilt()
+gatherOldDumpedOFiles()
 
-#filterForType()
+filterForType()
 
-#runMakeCleanBuilt()
-#gatherNewDumpedOFiles()
+runMakeCleanBuilt()
+gatherNewDumpedOFiles()
 
 checkForDifference()
-
-#sp.call("diff -B -Z a3dapip.o.f.asm a3dapip.o.f90.asm > ./Diff/Python_Diff__erence.txt", shell = True)
