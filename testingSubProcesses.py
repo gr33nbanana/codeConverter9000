@@ -47,64 +47,39 @@ def runMakeCleanBuilt():
     except:
         print("Are you sure make file is in this directory?")
 
-def gatherOldDumpedOFiles():
+
+def gatherDumpedOFiles( fileType ):
+    #objdump -d ./folders/file.o > file.o.asm
     sp.call("mkdir -p ./DumpedFiles", shell = True)
+    #collects .o files recursively
+    outputFolder = "./DumpedFiles/"
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
-        # fileName[fileName.rfind('/') + 1 : ] gives the string after the last occurance of '/' which is the name of the .o file so that it prints in the DumpedFiles directory
-        shellArgument = "objdump -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.asm"
-
-        print(shellArgument)
-        sp.call(shellArgument, shell = True)
-
-        sp.call("strings -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f.txt", shell = True)
-
-def gatherNewDumpedOFiles():
-    sp.call("mkdir -p ./DumpedFiles", shell = True)
-    for fileRef in pathlib.Path('.').glob('**/*.o'):
-        fileName = str(fileRef)
-        shellArgument = "objdump -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.asm"
+        shellArgument = "objdump -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".asm"
         print(shellArgument)
 
         sp.call(shellArgument, shell = True)
-        sp.call("strings -d " + fileName + " > " + "./DumpedFiles/" + fileName[fileName.rfind('/') + 1 : ] + ".f90.txt", shell = True)
+        sp.call("strings -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".txt", shell = True)
 
-def checkForDifference():
+def checkForDifference( thisType ):
     sp.call("mkdir -p ./Diff", shell = True)
     print("CHECKING DIFFERENCES")
+    #File location
+    fileLocation = './DumpedFiles/'
+    outputFolder = './Diff/'
 
-    for fileRefOne, fileRefTwo in zip( pathlib.Path('./DumpedFiles/').glob("*.f.asm"), pathlib.Path('./DumpedFiles/').glob("*.f90.asm") ):
+    for fileRefOne, fileRefTwo in zip( pathlib.Path( fileLocation ).glob("*.f." + thisType ), pathlib.Path(fileLocation).glob("*.f90." + thisType) ):
         fileOne = "./" + str(fileRefOne)
         fileTwo = "./" + str(fileRefTwo)
 
         fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
         fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
 
-        outputFileName = ("difference_ASSEMBLY__" + fileOneName + "__" + fileTwoName).replace('.', '')
+        outputFileName = ("difference_" + thisType + "__" + fileOneName + "__" + fileTwoName).replace('.', '')
         outputFileName = outputFileName + ".txt"
 
         shellArgument = "diff -B -Z " + fileOne + " " + fileTwo
-        saveShellArgument = " > ./Diff/" + outputFileName
-
-        print(shellArgument)
-        #save the output of diff to see if its empty or not
-        #sp.call apperently returns an integer which is 0 if the difference is empty
-        difference = sp.call(shellArgument, shell = True)
-
-        if difference != 0:
-            print("DIFFERENCE IN " + fileOneName + " AND " + fileTwoName)
-            sp.call(shellArgument + saveShellArgument ,shell = True)
-
-    for fileRefOne, fileRefTwo in zip( pathlib.Path('./DumpedFiles/').glob("*.f.txt"), pathlib.Path('./DumpedFiles/').glob("*.f90.txt") ):
-        fileOne = "./" + str(fileRefOne)
-        fileTwo = "./" + str(fileRefTwo)
-        fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
-        fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
-
-        outputFileName = ("difference_STRINGS__" + fileOneName + "__" + fileTwoName).replace('.', '')
-        outputFileName = outputFileName + ".txt"
-        shellArgument = "diff -B -Z " + fileOne + " " + fileTwo
-        saveShellArgument = " > ./Diff/" + outputFileName
+        saveShellArgument = " > " + outputFolder + outputFileName
 
         print(shellArgument)
         #save the output of diff to see if its empty or not
@@ -120,11 +95,12 @@ def checkForDifference():
 
 
 #runMakeCleanBuilt()
-#gatherOldDumpedOFiles()
+#gatherDumpedOFiles('f')
 
 #filterForType()
 
 #runMakeCleanBuilt()
-#gatherNewDumpedOFiles()
+#gatherDumpedOFiles('f90')
 
-checkForDifference()
+checkForDifference('asm')
+checkForDifference('txt')
