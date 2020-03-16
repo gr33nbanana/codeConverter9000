@@ -6,7 +6,6 @@ import pathlib
 def filterForType(location = str( input("Enter full path to look in:\n") ),
  fileType = str( input("Enter filetype to look for:\n") ),
  subFolders = input("Should subfolders be included?") ):
-  output = sp.getoutput('dir -1 %s %s' %(location, subFolders))
   globArgument = '*.%s'%fileType
   doRecursive = False
 
@@ -71,9 +70,11 @@ def checkForDifference( thisType ):
     for fileRefOne, fileRefTwo in zip( pathlib.Path( fileLocation ).glob("*.f." + thisType ), pathlib.Path(fileLocation).glob("*.f90." + thisType) ):
         fileOne = "./" + str(fileRefOne)
         fileTwo = "./" + str(fileRefTwo)
+        #fileOne ./DumpedFiles/someName.f.asm or ./DumpedFiles/someName.f.txt
 
         fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
         fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
+        #fileOnename = someName.f.asm or someName.f.txt
 
         outputFileName = ("difference_" + thisType + "__" + fileOneName + "__" + fileTwoName).replace('.', '')
         outputFileName = outputFileName + ".txt"
@@ -88,19 +89,20 @@ def checkForDifference( thisType ):
 
         if difference != 0:
             print("DIFFERENCE IN " + fileOneName + " AND " + fileTwoName)
+            print(shellArgument + saveShellArgument)
             sp.call(shellArgument + saveShellArgument ,shell = True)
 
 
 #Make gathering O files have arguments for the format so that the same function is called before and after formatting but with different format arguments
 
 
-#runMakeCleanBuilt()
-#gatherDumpedOFiles('f')
+runMakeCleanBuilt()
+gatherDumpedOFiles('f')
 
-#filterForType()
+filterForType()
 
-#runMakeCleanBuilt()
-#gatherDumpedOFiles('f90')
+runMakeCleanBuilt()
+gatherDumpedOFiles('f90')
 
 checkForDifference('asm')
 checkForDifference('txt')
