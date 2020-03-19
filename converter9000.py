@@ -1,16 +1,17 @@
-"""Converter9000
+"""Converter9000.py
 
 Usage:
-  converter9000 convert [--path=<location> --recursive]
-  converter9000 convertonly [--path=<location>] <filename>...
+  converter9000.py convert <fromtype> <totype>[--path=<location>] [--only=<filename>... | --recursive]
 
+Arguments:
+  <fromtype>         filetype to be converter only .f supported now
+  <totype>           filetype to convert to
 Options:
-  -h --help    Show this documentation.
-  --version    Show version.
-  --path=<>    The path of the folder or files to be converted if it is not the current path [default: ./]
-  --recursive  If specified the program will run recursively
-
-
+  -h --help          Show this documentation.
+  --version          Show version.
+  -p --path=<>       The path of the folder or files to be converted if it is not the current path [default: ./]
+  -r --recursive     If specified the program will run recursively
+  -o --only <name>   Only convert the give files
 
 """
 
@@ -20,27 +21,26 @@ from glob import glob
 import os
 import pathlib
 
-def filterForType(location = str( input("Enter full path to look in:\n") ),
- fileType = str( input("Enter filetype to look for:\n") ),
- subFolders = input("Should subfolders be included?") ):
-  globArgument = '*.%s'%fileType
-  doRecursive = False
+args = docopt(__doc__, version = '0.1')
 
-  if (len(subFolders) >= 1 and subFolders.lower()[0] == "y"):
-      globArgument = '**/' + globArgument
-      doRecursive = True
 
-  outputlines = glob(globArgument, recursive = doRecursive)
+def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'] ):
+    #location = './' by default, something like 'D:/Uni/' if specified
+    #fileType = '.f' '.f90'
+    globArgument = location + '*%s'%fromType
 
-  for fileName in outputlines:
-    #print("FILE NAME: ", fileName)
+    if ( args['--recursive'] == True ):
+      globArgument = location + '**/*%s'%fromType
 
-    #checks if the last characters are the same as fileType
-    #if fileName[-len(fileType) : ] == fileType:
+    outputlines = glob(globArgument, recursive = args['--recursive'])
+
+    for fileName in outputlines:
+        #checks if the last characters are the same as fileType
+        #if fileName[-len(fileType) : ] == fileType:
         #filename contains 'fullpath/filename'
-    outPutName = fileName[: - len(fileType)]
-    outPutName = outPutName.__add__('f90')
-    findentArg = "findent -ofree < {0} > {1} ".format(fileName, outPutName)
+        outPutName = fileName[: - len(fromType)]
+        outPutName = outPutName.__add__(toType)
+        findentArg = "findent -ofree < {0} > {1} ".format(fileName, outPutName)
 
     try:
         print(findentArg)
@@ -73,9 +73,11 @@ def gatherDumpedOFiles( fileType ):
         fileName = str(fileRef)
         shellArgument = "objdump -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".asm"
         print(shellArgument)
-
         sp.call(shellArgument, shell = True)
-        sp.call("strings -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".txt", shell = True)
+
+        shellArgument = "strings -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".txt"
+        print(shellArgument)
+        sp.call(shellArgument, shell = True)
 
 def checkForDifference( thisType ):
     sp.call("mkdir -p ./Diff", shell = True)
