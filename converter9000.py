@@ -1,7 +1,7 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert <fromtype> <totype>[--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
+  converter9000.py convert <fromtype> <totype> [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
 
 Arguments:
   <fromtype>         Filetype to be converter only .f supported now
@@ -14,7 +14,7 @@ Options:
   --version          Show version.
   -p --path=<>       The path of the folder or files to be converted if it is not the current path [default: ./]
   -r --recursive     If specified the program will run recursively
-  -o --only <name>   Only convert the give files
+  -o --only <name>   Only convert the given files
   --dump_at=<>       Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
   --diff_at=<>       Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
 
@@ -87,6 +87,10 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
         sp.call(shellArgument, shell = True)
 
 def checkForDifference( givenType ):
+    #Checks for difference in the asembly and string output of a set of object files
+    #Object files before running findent contain <fromType> in their name
+    #Object files after running findent contain <toType> in their name
+
     #default "mkdir -p ./Diff/"
     sp.call("mkdir -p " + args['--diff_at'], shell = True)
     print("CHECKING DIFFERENCES")
@@ -110,7 +114,7 @@ def checkForDifference( givenType ):
         outputFileName = ("difference_" + givenType + "__" + fileOneName + "__" + fileTwoName).replace('.', '-')
         outputFileName = outputFileName + ".txt"
 
-        shellArgument = diffOptions + fileOne + " " + fileTwo
+        shellArgument = "diff" + diffOptions + fileOne + " " + fileTwo
         saveShellArgument = " > " + outputFolder + outputFileName
 
         print(shellArgument)
