@@ -1,17 +1,22 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert <fromtype> <totype>[--path=<location>] [--only=<filename>... | --recursive]
+  converter9000.py convert <fromtype> <totype>[--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
 
 Arguments:
-  <fromtype>         filetype to be converter only .f supported now
-  <totype>           filetype to convert to
+  <fromtype>         Filetype to be converter only .f supported now
+  <totype>           Filetype to convert to
+  <dumppath>         Folder path where .o file information is saved
+  <diffpath>         Folder path where to gather results from diff
+
 Options:
   -h --help          Show this documentation.
   --version          Show version.
   -p --path=<>       The path of the folder or files to be converted if it is not the current path [default: ./]
   -r --recursive     If specified the program will run recursively
   -o --only <name>   Only convert the give files
+  --dump_at=<>       Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
+  --diff_at=<>       Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
 
 """
 
@@ -47,6 +52,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         sp.call(findentArg, shell = True)
     except:
         print("Error while trying to run findent")
+
     try:
         print("Removing " + fileName)
         os.remove(fileName)
@@ -64,13 +70,14 @@ def runMakeCleanBuilt():
         print("Are you sure make file is in this directory?")
 
 
-def gatherDumpedOFiles( fileType ):
+def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     #objdump -d ./folders/file.o > file.o.asm
-    sp.call("mkdir -p ./DumpedFiles", shell = True)
+    sp.call("mkdir -p " + outputFolder, shell = True)
     #collects .o files recursively
-    outputFolder = "./DumpedFiles/"
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
+        # UBUNTU AND WINDOWS DIFFER IN BACKWARDS AND FORWARD SLASHES HERE
+        #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         shellArgument = "objdump -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".asm"
         print(shellArgument)
         sp.call(shellArgument, shell = True)
@@ -79,26 +86,31 @@ def gatherDumpedOFiles( fileType ):
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
-def checkForDifference( thisType ):
-    sp.call("mkdir -p ./Diff", shell = True)
+def checkForDifference( givenType ):
+    #default "mkdir -p ./Diff/"
+    sp.call("mkdir -p " + args['--diff_at'], shell = True)
     print("CHECKING DIFFERENCES")
     #File location
-    fileLocation = './DumpedFiles/'
-    outputFolder = './Diff/'
+    fileLocation = args['--dump_at'] #default ./DumpedFiles/
+    outputFolder = args['--diff_at'] #default: ./Diff/
+    oldFileType = args['<fromType>'] #example .f
+    newFileType = args['<toType>']   #example .f90
+    diffOptions = " -B -Z --strip-trailing-cr "
 
-    for fileRefOne, fileRefTwo in zip( pathlib.Path( fileLocation ).glob("*.f." + thisType ), pathlib.Path(fileLocation).glob("*.f90." + thisType) ):
+    for fileRefOne, fileRefTwo in zip( pathlib.Path( fileLocation ).glob("*"+ oldFileType + givenType ), pathlib.Path(fileLocation).glob("*" + newFileType + givenType) ):
         fileOne = "./" + str(fileRefOne)
         fileTwo = "./" + str(fileRefTwo)
         #fileOne ./DumpedFiles/someName.f.asm or ./DumpedFiles/someName.f.txt
 
+        #UBUNTU AND WINDOWS DEFER \\ and / , Check for pathlib use
         fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
         fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
         #fileOnename = someName.f.asm or someName.f.txt
 
-        outputFileName = ("difference_" + thisType + "__" + fileOneName + "__" + fileTwoName).replace('.', '')
+        outputFileName = ("difference_" + givenType + "__" + fileOneName + "__" + fileTwoName).replace('.', '-')
         outputFileName = outputFileName + ".txt"
 
-        shellArgument = "diff -B -Z " + fileOne + " " + fileTwo
+        shellArgument = diffOptions + fileOne + " " + fileTwo
         saveShellArgument = " > " + outputFolder + outputFileName
 
         print(shellArgument)
@@ -116,12 +128,12 @@ def checkForDifference( thisType ):
 
 
 runMakeCleanBuilt()
-gatherDumpedOFiles('f')
+gatherDumpedOFiles(args['<fromType>'])
 
 filterForType()
 
 runMakeCleanBuilt()
-gatherDumpedOFiles('f90')
+gatherDumpedOFiles(args['<toType>'])
 
-checkForDifference('asm')
-checkForDifference('txt')
+checkForDifference('.asm')
+checkForDifference('.txt')
