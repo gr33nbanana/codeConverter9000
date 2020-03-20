@@ -97,8 +97,8 @@ def checkForDifference( givenType ):
     #File location
     fileLocation = args['--dump_at'] #default ./DumpedFiles/
     outputFolder = args['--diff_at'] #default: ./Diff/
-    oldFileType = args['<fromType>'] #example .f
-    newFileType = args['<toType>']   #example .f90
+    oldFileType = args['<fromtype>'] #example .f
+    newFileType = args['<totype>']   #example .f90
     diffOptions = " -B -Z --strip-trailing-cr "
 
     for fileRefOne, fileRefTwo in zip( pathlib.Path( fileLocation ).glob("*"+ oldFileType + givenType ), pathlib.Path(fileLocation).glob("*" + newFileType + givenType) ):
@@ -132,12 +132,12 @@ def checkForDifference( givenType ):
 
 
 runMakeCleanBuilt()
-gatherDumpedOFiles(args['<fromType>'])
+gatherDumpedOFiles(args['<fromtype>'])
 
 filterForType()
 
 runMakeCleanBuilt()
-gatherDumpedOFiles(args['<toType>'])
+gatherDumpedOFiles(args['<totype>'])
 
 checkForDifference('.asm')
 checkForDifference('.txt')
