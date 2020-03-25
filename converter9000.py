@@ -82,17 +82,20 @@ def runMakeCleanBuilt():
 
 
 def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
+    try:
+        os.mkdir(outputFolder)
+    except:
+        pass
     #objdump -d ./folders/file.o > file.o.asm
-    sp.call("mkdir -p " + outputFolder, shell = True)
     #collects .o files recursively
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
-        shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + 1 : ] + "." + fileType + ".asm"
+        shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
-        shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + 1 : ] + "." + fileType + ".txt"
+        shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
@@ -101,8 +104,11 @@ def checkForDifference( givenType ):
     #Object files before running findent contain <fromType> in their name
     #Object files after running findent contain <toType> in their name
 
-    #default "mkdir -p ./Diff/"
-    sp.call("mkdir -p " + args['--diff_at'], shell = True)
+    #default "mkdir ./Diff/"
+    try:
+        os.mkdir(args['--diff_at'])
+    except:
+        pass
     print("CHECKING DIFFERENCES")
     #File location
     fileLocation = args['--dump_at'] #default ./DumpedFiles/
@@ -116,9 +122,8 @@ def checkForDifference( givenType ):
         fileTwo = "./" + str(fileRefTwo)
         #fileOne ./DumpedFiles/someName.f.asm or ./DumpedFiles/someName.f.txt
 
-        #UBUNTU AND WINDOWS DEFER \\ and / , Check for pathlib use
         fileOneName = os.path.basename(fileOne) #fileOne[ fileOne.rfind('/') + 1 : ]
-        fileTwoName = os.path.basename(fileTwo)#fileTwo[ fileTwo.rfind('/') + 1 : ]
+        fileTwoName = os.path.basename(fileTwo) #fileTwo[ fileTwo.rfind('/') + 1 : ]
         #fileOnename = someName.f.asm or someName.f.txt
 
         outputFileName = ("difference_" + givenType + "__" + fileOneName + "__" + fileTwoName).replace('.', '-')
