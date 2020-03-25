@@ -1,8 +1,8 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename> | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath>] [--only=<filename> | --recursive]
+  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath>] [--only=<filename>... | --recursive]
   converter9000.py hephaestus <fromtype> [--dump_at=<dumppath>]
 
 Commands:
@@ -52,10 +52,10 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
     if(len(args['--only']) > 0):
         #args['--only'][0] is the string "file1.txt,file2.cpp..."
         #parses the string to a list of file names
-        args['--only'] = args['--only'][0].split(',')
+        files = args['--only'][0].split(',')
         #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
-        fullPathName = [location + name for name in args['--only']]
-        outputlines = fullPathName
+        outputlines = [location + name for name in files]
+        print("OUTPUTLINES:\n" + str(outputlines))
     elif(len(args['--only']) == 0):
         #outputlines = glob("full/path/filename(.f)<-dot in fromType string")
         outputlines = glob(globArgument, recursive = args['--recursive'])
