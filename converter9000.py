@@ -87,13 +87,12 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     #collects .o files recursively
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
-        # UBUNTU AND WINDOWS DIFFER IN BACKWARDS AND FORWARD SLASHES HERE (replace all backwards to forwards slashes?)
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
-        shellArgument = "objdump -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".asm"
+        shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + 1 : ] + "." + fileType + ".asm"
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
-        shellArgument = "strings -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".txt"
+        shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + 1 : ] + "." + fileType + ".txt"
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
@@ -118,8 +117,8 @@ def checkForDifference( givenType ):
         #fileOne ./DumpedFiles/someName.f.asm or ./DumpedFiles/someName.f.txt
 
         #UBUNTU AND WINDOWS DEFER \\ and / , Check for pathlib use
-        fileOneName = fileOne[ fileOne.rfind('/') + 1 : ]
-        fileTwoName = fileTwo[ fileTwo.rfind('/') + 1 : ]
+        fileOneName = os.path.basename(fileOne) #fileOne[ fileOne.rfind('/') + 1 : ]
+        fileTwoName = os.path.basename(fileTwo)#fileTwo[ fileTwo.rfind('/') + 1 : ]
         #fileOnename = someName.f.asm or someName.f.txt
 
         outputFileName = ("difference_" + givenType + "__" + fileOneName + "__" + fileTwoName).replace('.', '-')
