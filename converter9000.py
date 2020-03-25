@@ -1,9 +1,9 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath>] [--only=<filename>... | --recursive]
-
+  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename> | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath>] [--only=<filename> | --recursive]
+  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath>]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -11,6 +11,8 @@ Commands:
                      Sisyphus does either half of the work
   sisyphus           Uphill only runs findent and saves the file with the same filename so that the changes are checked within GitKraken or other version control
                      Downhill recompiles the program and overwrites the assembly and string files
+
+  hephaestus         Runs the make file and saves assembly code and strings
 
 
 Arguments:
@@ -20,13 +22,13 @@ Arguments:
   <diffpath>         Folder path where to gather results from diff
 
 Options:
-  -h --help          Show this documentation.
-  --version          Show version.
-  -p --path=<>       The path of the folder or files to be converted if it is not the current path [default: ./]
-  -r --recursive     If specified the program will run recursively
-  -o --only <name>   Only convert the given files
-  --dump_at=<>       Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
-  --diff_at=<>       Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
+  -h --help                 Show this documentation.
+  --version                 Show version.
+  -p --path=<>              The path of the folder or files to be converted if it is not the current path [default: ./]
+  -r --recursive            If specified the program will run recursively
+  -o --only <name1,name2>   Only convert the given files or files seperated by comma -o file1.txt,file2.cpp...
+  --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
+  --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
 
 """
 
@@ -39,36 +41,48 @@ import pathlib
 args = docopt(__doc__, version = '0.2')
 
 
-def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True ):
+def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
     #location = './' by default, something like 'D:/Uni/' if specified
     #fileType = '.f' '.f90'
     globArgument = location + '*%s'%fromType
 
     if ( args['--recursive'] == True ):
-      globArgument = location + '**/*%s'%fromType
+        globArgument = location + '**/*%s'%fromType
 
-    outputlines = glob(globArgument, recursive = args['--recursive'])
+    if(len(args['--only']) > 0):
+        #args['--only'][0] is the string "file1.txt,file2.cpp..."
+        #parses the string to a list of file names
+        args['--only'] = args['--only'][0].split(',')
+        #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
+        fullPathName = [location + name for name in args['--only']]
+        outputlines = fullPathName
+    elif(len(args['--only']) == 0):
+        #outputlines = glob("full/path/filename(.f)<-dot in fromType string")
+        outputlines = glob(globArgument, recursive = args['--recursive'])
 
-    for fileName in outputlines:
-        #checks if the last characters are the same as fileType
-        #if fileName[-len(fileType) : ] == fileType:
+    for BasePathAndName in outputlines:
         #filename contains 'fullpath/filename'
-        outPutName = fileName[: - len(fromType)]
-        outPutName = outPutName.__add__(toType)
-        findentArg = "findent -ofree < {0} > {1} ".format(fileName, outPutName)
+        outputPathAndName = BasePathAndName[: - len(fromType)]
+        outputPathAndName = outputPathAndName.__add__(toType)
+        findentArg = "findent -ofree < {oldFile} > {newFile} ".format(oldFile = BasePathAndName, newFile = outputPathAndName)
 
         try:
             print(findentArg)
             sp.call(findentArg, shell = True)
         except:
             print("Error while trying to run findent")
+        if(sisyph):
+            catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = BasePathAndName)
+            print(catArgument)
+            sp.call(catArgument, shell = True)
+            os.remove(outputPathAndName)
 
         if(remove):
             try:
-                print("Removing " + fileName)
-                os.remove(fileName)
+                print("Removing " + BasePathAndName)
+                os.remove(BasePathAndName)
             except:
-                print("Error while deleting file: " + fileName)
+                print("Error while deleting file: " + BasePathAndName)
 
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
 
@@ -168,10 +182,13 @@ if __name__ == '__main__':
             hephaestus()
 
         #Only convert files and save them with the same name
-        filterForType(toType = args['<fromtype>'], remove = False)
+        filterForType(toType = '_.f90', remove = False)
 
     elif(args['sisyphus'] and args['downhill']):
         #The files should be converted but kept with the same name
         #Program recompiles with (presumebly) new object files
         #Overwrites object files assembly and string code
+        hephaestus()
+
+    elif(args['hephaestus']):
         hephaestus()
