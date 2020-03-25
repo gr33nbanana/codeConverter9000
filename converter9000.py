@@ -1,7 +1,17 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert <fromtype> <totype> [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
+  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath>] [--only=<filename>... | --recursive]
+
+
+Commands:
+  convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
+
+                     Sisyphus does either half of the work
+  sisyphus           Uphill only runs findent and saves the file with the same filename so that the changes are checked within GitKraken or other version control
+                     Downhill recompiles the program and overwrites the assembly and string files
+
 
 Arguments:
   <fromtype>         Filetype to be converter only .f supported now
@@ -29,7 +39,7 @@ import pathlib
 args = docopt(__doc__, version = '0.1')
 
 
-def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'] ):
+def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True ):
     #location = './' by default, something like 'D:/Uni/' if specified
     #fileType = '.f' '.f90'
     globArgument = location + '*%s'%fromType
@@ -47,17 +57,18 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         outPutName = outPutName.__add__(toType)
         findentArg = "findent -ofree < {0} > {1} ".format(fileName, outPutName)
 
-    try:
-        print(findentArg)
-        sp.call(findentArg, shell = True)
-    except:
-        print("Error while trying to run findent")
+        try:
+            print(findentArg)
+            sp.call(findentArg, shell = True)
+        except:
+            print("Error while trying to run findent")
 
-    try:
-        print("Removing " + fileName)
-        os.remove(fileName)
-    except:
-        print("Error while deleting file: " + fileName)
+        if(remove):
+            try:
+                print("Removing " + fileName)
+                os.remove(fileName)
+            except:
+                print("Error while deleting file: " + fileName)
 
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
 
@@ -76,7 +87,7 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     #collects .o files recursively
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
-        # UBUNTU AND WINDOWS DIFFER IN BACKWARDS AND FORWARD SLASHES HERE
+        # UBUNTU AND WINDOWS DIFFER IN BACKWARDS AND FORWARD SLASHES HERE (replace all backwards to forwards slashes?)
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         shellArgument = "objdump -d " + fileName + " > " + outputFolder + fileName[fileName.rfind('/') + 1 : ] + "." + fileType + ".asm"
         print(shellArgument)
@@ -127,17 +138,36 @@ def checkForDifference( givenType ):
             print(shellArgument + saveShellArgument)
             sp.call(shellArgument + saveShellArgument ,shell = True)
 
+def hephaestus():
+    runMakeCleanBuilt()
+    gatherDumpedOFiles(fileType = args['<fromtype>'])
 
-#Make gathering O files have arguments for the format so that the same function is called before and after formatting but with different format arguments
+if __name__ == '__main__':
+    if(args['convert']):
+        #Create Object files from old format types
+        runMakeCleanBuilt()
+        #Gather the assembly code and string information
+        gatherDumpedOFiles( fileType = args['<fromtype>'] )
+        filterForType()
+        #Re compile the program for new object files
+        runMakeCleanBuilt()
+        #Gather new assembly code and strings
+        gatherDumpedOFiles( fileType = args['<totype>'] )
+        #run diff between the old and new assembly files
+        checkForDifference('.asm')
+        checkForDifference('.txt')
 
+    elif(args['sisyphus'] and args['uphill']):
+        #Save assembly code if it wasn't done
+        if not ( pathlib.Path(args['--dump_at']).exists() ):
+            print("No dumped assembly files detected.\nWill compile program and save assembly code")
+            hephaestus()
 
-runMakeCleanBuilt()
-gatherDumpedOFiles(args['<fromtype>'])
+        #Only convert files and save them with the same name
+        filterForType(toType = args['<fromtype>'], remove = False)
 
-filterForType()
-
-runMakeCleanBuilt()
-gatherDumpedOFiles(args['<totype>'])
-
-checkForDifference('.asm')
-checkForDifference('.txt')
+    elif(args['sisyphus'] and args['downhill']):
+        #The files should be converted but kept with the same name
+        #Program recompiles with (presumebly) new object files
+        #Overwrites object files assembly and string code
+        hephaestus()
