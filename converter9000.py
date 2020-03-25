@@ -36,7 +36,7 @@ from glob import glob
 import os
 import pathlib
 
-args = docopt(__doc__, version = '0.1')
+args = docopt(__doc__, version = '0.2')
 
 
 def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True ):
