@@ -69,7 +69,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
             print(findentArg)
             sp.call(findentArg, shell = True)
         except:
-            print("Error while trying to run findent")
+            print("Error while trying to run findent\nFiles might not be in the current or specified path")
         if(sisyph):
             catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = basePathAndName)
             print(catArgument)
