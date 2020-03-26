@@ -40,10 +40,9 @@ import pathlib
 
 args = docopt(__doc__, version = '0.2')
 
-
 def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
     #location = './' by default, something like 'D:/Uni/' if specified
-    #fileType = '.f' '.f90'
+    #<fromtype> = '.f' '.f90'
     globArgument = location + '*%s'%fromType
 
     if ( args['--recursive'] == True ):
@@ -55,16 +54,16 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         files = args['--only'][0].split(',')
         #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
         outputlines = [location + name for name in files]
-        print("OUTPUTLINES:\n" + str(outputlines))
+        #print("OUTPUTLINES:\n" + str(outputlines))
     elif(len(args['--only']) == 0):
         #outputlines = glob("full/path/filename(.f)<-dot in fromType string")
         outputlines = glob(globArgument, recursive = args['--recursive'])
 
-    for BasePathAndName in outputlines:
-        #filename contains 'fullpath/filename'
-        outputPathAndName = BasePathAndName[: - len(fromType)]
+    for basePathAndName in outputlines:
+        #basePathAndName contains 'fullpath/filename'
+        outputPathAndName = basePathAndName[: - len(fromType)]
         outputPathAndName = outputPathAndName.__add__(toType)
-        findentArg = "findent -ofree < {oldFile} > {newFile} ".format(oldFile = BasePathAndName, newFile = outputPathAndName)
+        findentArg = "findent -ofree < {oldFile} > {newFile} ".format(oldFile = basePathAndName, newFile = outputPathAndName)
 
         try:
             print(findentArg)
@@ -72,17 +71,17 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         except:
             print("Error while trying to run findent")
         if(sisyph):
-            catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = BasePathAndName)
+            catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = basePathAndName)
             print(catArgument)
             sp.call(catArgument, shell = True)
             os.remove(outputPathAndName)
 
         if(remove):
             try:
-                print("Removing " + BasePathAndName)
-                os.remove(BasePathAndName)
+                print("Removing " + basePathAndName)
+                os.remove(basePathAndName)
             except:
-                print("Error while deleting file: " + BasePathAndName)
+                print("Error while deleting file: " + basePathAndName)
 
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
 
@@ -105,11 +104,15 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     for fileRef in pathlib.Path('.').glob('**/*.o'):
         fileName = str(fileRef)
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
-        shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
+        #shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
+        shellArgument = "objdump -d {objectName} > {outputFolder}{name}.{extension}.asm"
+        shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType)
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
-        shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
+        #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
+        shellArgument = "strings -d {objectName} > {outputFolder}{name}.{extension}.txt"
+        shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType )
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
@@ -129,6 +132,7 @@ def checkForDifference( givenType ):
     outputFolder = args['--diff_at'] #default: ./Diff/
     oldFileType = args['<fromtype>'] #example .f
     newFileType = args['<totype>']   #example .f90
+    #givenType                        example .asm
     diffOptions = " -B -Z --strip-trailing-cr "
 
     for fileRefOne, fileRefTwo in zip( pathlib.Path( fileLocation ).glob("*"+ oldFileType + givenType ), pathlib.Path(fileLocation).glob("*" + newFileType + givenType) ):
@@ -140,11 +144,11 @@ def checkForDifference( givenType ):
         fileTwoName = os.path.basename(fileTwo) #fileTwo[ fileTwo.rfind('/') + 1 : ]
         #fileOnename = someName.f.asm or someName.f.txt
 
-        outputFileName = ("difference_" + givenType + "__" + fileOneName + "__" + fileTwoName).replace('.', '-')
+        outputFileName = ("difference_" + givenType + "__" + fileOneName + "_||_" + fileTwoName).replace('.', '-')
         outputFileName = outputFileName + ".txt"
 
-        shellArgument = "diff" + diffOptions + fileOne + " " + fileTwo
-        saveShellArgument = " > " + outputFolder + outputFileName
+        shellArgument = "diff {options} {firstFile} {secondFile}".format(options = diffOptions, firstFile = fileOne, secondFile = fileTwo)
+        saveShellArgument = " > {outputPath}{name}".format(outputPath = outputFolder, name = outputFileName)
 
         print(shellArgument)
         #save the output of diff to see if its empty or not
@@ -186,7 +190,7 @@ if __name__ == '__main__':
 
     elif(args['sisyphus'] and args['downhill']):
         #The files should be converted but kept with the same name
-        #Program recompiles with (presumebly) new object files
+        #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
         hephaestus()
 
