@@ -17,7 +17,7 @@ Commands:
 
 Arguments:
   <fromtype>         Filetype to be converter only .f supported now
-  <totype>           Filetype to convert to
+  <totype>           Filetype to convert to only .f90 supported now
   <dumppath>         Folder path where .o file information is saved
   <diffpath>         Folder path where to gather results from diff
 
@@ -39,12 +39,10 @@ import os
 import pathlib
 
 args = docopt(__doc__, version = '0.2')
+#location = './' by default, something like 'D:/Uni/' if specified
 
-def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
-    #location = './' by default, something like 'D:/Uni/' if specified
-    #<fromtype> = '.f' '.f90'
+def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
     globArgument = location + '*%s'%fromType
-
     if ( args['--recursive'] == True ):
         globArgument = location + '**/*%s'%fromType
 
@@ -53,11 +51,18 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         #parses the string to a list of file names
         files = args['--only'][0].split(',')
         #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
-        outputlines = [location + name for name in files]
-        #print("OUTPUTLINES:\n" + str(outputlines))
+        paths = [location + name for name in files]
+        #print("PATHS:\n" + str(paths))
     elif(len(args['--only']) == 0):
-        #outputlines = glob("full/path/filename(.f)<-dot in fromType string")
-        outputlines = glob(globArgument, recursive = args['--recursive'])
+        #paths = glob("full/path/filename(.f)<-dot in fromType string")
+        paths = glob(globArgument, recursive = args['--recursive'])
+    return paths
+
+def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
+    #location = './' by default, something like 'D:/Uni/' if specified
+    #<fromtype> = '.f' '.f90' contains a dot
+    #<totype>   = '.f' '.f90' contains a dot
+    outputlines = collectPaths()
 
     for basePathAndName in outputlines:
         #basePathAndName contains 'fullpath/filename'
@@ -95,6 +100,7 @@ def runMakeCleanBuilt():
 
 
 def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
+    #fileType is only information about the source of the object files and just gets added to the saved file name
     try:
         os.mkdir(outputFolder)
     except:
