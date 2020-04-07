@@ -38,6 +38,7 @@ import subprocess as sp
 from glob import glob
 import os
 import pathlib
+import shutil
 
 args = docopt(__doc__, version = '0.2')
 #location = './' by default, something like 'D:/Uni/' if specified
@@ -80,7 +81,8 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         if(sisyph):
             catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = basePathAndName)
             print(catArgument)
-            sp.call(catArgument, shell = True)
+            shutil.copy2(outputPathAndName, basePathAndName)
+            #sp.call(catArgument, shell = True)
             #os.remove(outputPathAndName)
 
         if(remove):
@@ -198,7 +200,8 @@ if __name__ == '__main__':
 
     elif(args['sisyphus'] and args['downhill']):
         if not ( pathlib.Path(args['--dump_at']).exists() ):
-            print("No dumped assembly files detected.\nIf you wish to compile for the first time use hephaestus command\nOtherwise sisyphus uphill to format files first")
+            print("No dumped assembly files detected. Make sure they exist in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
+            raise SystemExit
         #The files should be converted but kept with the same name
         #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
