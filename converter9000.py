@@ -2,7 +2,7 @@
 
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath>] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean] [--only=<filename>... | --recursive]
   converter9000.py hephaestus <fromtype> [--dump_at=<dumppath>]
 
 Commands:
@@ -29,6 +29,7 @@ Options:
   -o --only <name1,name2>   Only convert the given files or files seperated by comma -o file1.txt,file2.cpp...
   --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
   --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
+  --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
 
 """
 
@@ -65,7 +66,8 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
     outputlines = collectPaths()
 
     for basePathAndName in outputlines:
-        #basePathAndName contains 'fullpath/filename'
+        #basePathAndName contains   'fullpath/filename.f'            | fullpath/filename{fromType}
+        #outPutPathAndName contains 'fullopath/filename_.f90 or .f90 | fullpath/filename{toType}
         outputPathAndName = basePathAndName[: - len(fromType)]
         outputPathAndName = outputPathAndName.__add__(toType)
         findentArg = "findent -ofree < {oldFile} > {newFile} ".format(oldFile = basePathAndName, newFile = outputPathAndName)
@@ -79,7 +81,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
             catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = basePathAndName)
             print(catArgument)
             sp.call(catArgument, shell = True)
-            os.remove(outputPathAndName)
+            #os.remove(outputPathAndName)
 
         if(remove):
             try:
@@ -111,13 +113,13 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
         fileName = str(fileRef)
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         #shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
-        shellArgument = "objdump -d {objectName} > {outputFolder}{name}.{extension}.asm"
+        shellArgument = "objdump -d {objectName} > {outputFolder}{name}{extension}.asm"
         shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType)
         print(shellArgument)
         sp.call(shellArgument, shell = True)
 
         #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
-        shellArgument = "strings -d {objectName} > {outputFolder}{name}.{extension}.txt"
+        shellArgument = "strings -d {objectName} > {outputFolder}{name}{extension}.txt"
         shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType )
         print(shellArgument)
         sp.call(shellArgument, shell = True)
@@ -195,10 +197,27 @@ if __name__ == '__main__':
         filterForType(toType = '_.f90', remove = False)
 
     elif(args['sisyphus'] and args['downhill']):
+        if not ( pathlib.Path(args['--dump_at']).exists() ):
+            print("No dumped assembly files detected.\nIf you wish to compile for the first time use hephaestus command\nOtherwise sisyphus uphill to format files first")
         #The files should be converted but kept with the same name
         #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
+        #TODO: rename changed files to .f90
         hephaestus()
+        if(args['--clean']):
+            paths = collectPaths(fromType = '_.f90')
+            for pathName in paths:
+                #print("PATHS: " + str(paths))
+                #pathName   = path/filename_.f90
+                #outputPath = path/filename.f90
+                #remPath    = path/filename.f
+
+                outputPath = pathName[:-len("_.f90")] + ".f90"
+                remPath = pathName[:-len("_.f90")] + ".f"
+                shellArg = "{oldFormatPath} > {newFormatPath}".format(oldFormatPath = pathName, newFormatPath = outputPath)
+                print(shellArg)
+                os.rename(pathName, outputPath)
+                os.remove(remPath)
 
     elif(args['hephaestus']):
         hephaestus()
