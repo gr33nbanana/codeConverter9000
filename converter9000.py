@@ -71,8 +71,11 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         #outPutPathAndName contains 'fullopath/filename_.f90 or .f90 | fullpath/filename{toType}
         outputPathAndName = basePathAndName[: - len(fromType)]
         outputPathAndName = outputPathAndName.__add__(toType)
-        findentArg = "findent -ofree < {oldFile} > {newFile} ".format(oldFile = basePathAndName, newFile = outputPathAndName)
+        #Extra formatting for Windows
+        outputPathAndName = str(outputPathAndName).replace("\\","/")
+        basePathAndName = str(basePathAndName).replace("\\","/")
 
+        findentArg = "findent -ofree < {oldFile} > {newFile} ".format(oldFile = basePathAndName, newFile = outputPathAndName)
         try:
             print(findentArg)
             sp.call(findentArg, shell = True)
@@ -214,9 +217,13 @@ if __name__ == '__main__':
                 #pathName   = path/filename_.f90
                 #outputPath = path/filename.f90
                 #remPath    = path/filename.f
-
                 outputPath = pathName[:-len("_.f90")] + ".f90"
                 remPath = pathName[:-len("_.f90")] + ".f"
+                #Extra formatting for windows
+                pathName = pathName.replace("\\","/")
+                outputPath = outputPath.replace("\\","/")
+                remPath = remPath.replace("\\","/")
+
                 shellArg = "{oldFormatPath} > {newFormatPath}".format(oldFormatPath = pathName, newFormatPath = outputPath)
                 print(shellArg)
                 os.rename(pathName, outputPath)
