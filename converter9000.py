@@ -2,7 +2,7 @@
 
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake] [--only=<filename>... | --recursive]
   converter9000.py hephaestus <fromtype> [--dump_at=<dumppath>]
 
 Commands:
@@ -30,6 +30,7 @@ Options:
   --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
   --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
   --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
+  --fromMake                Specifies if program is called from a Makefile and doesn't run make built and make clean command lines [default: False]
 
 """
 
@@ -39,6 +40,8 @@ from glob import glob
 import os
 import pathlib
 import shutil
+import multiprocessing as mp
+import time
 
 args = docopt(__doc__, version = '0.2')
 #location = './' by default, something like 'D:/Uni/' if specified
@@ -100,13 +103,33 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 def runMakeCleanBuilt():
     try:
         print("Running make cleand and make built")
-        sp.call("make clean", shell = True)
-        sp.call("make built", shell = True)
+        if not (args['--fromMake']):
+            sp.call("make clean", shell = True)
+            sp.call("make built", shell = True)
     except:
         print("Are you sure make file is in this directory?")
+#For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
+def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fromtype>']):
+    fileName = givenName
+    #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
+    #shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
+    shellArgument = "objdump -d {objectName} > {outputFolder}{name}{extension}.asm"
+    shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType)
 
+    print(shellArgument)
+    #printList.append(shellArgument)
+    sp.call(shellArgument, shell = True)
+
+    #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
+    shellArgument = "strings -d {objectName} > {outputFolder}{name}{extension}.txt"
+    shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType )
+
+    print(shellArgument)
+    #printList.append(shellArgument)
+    sp.call(shellArgument, shell = True)
 
 def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
+    startTime = time.time()
     #fileType is only information about the source of the object files and just gets added to the saved file name
     try:
         os.mkdir(outputFolder)
@@ -114,20 +137,23 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
         pass
     #objdump -d ./folders/file.o > file.o.asm
     #collects .o files recursively
-    for fileRef in pathlib.Path('.').glob('**/*.o'):
-        fileName = str(fileRef)
-        #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
-        #shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
-        shellArgument = "objdump -d {objectName} > {outputFolder}{name}{extension}.asm"
-        shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType)
-        print(shellArgument)
-        sp.call(shellArgument, shell = True)
+    #Collect print statements here to not run print() all the time
+    printList = []
+    print("Gathering Assembly code and Strings")
+    pathList = []
+    for filePath in pathlib.Path('.').glob('**/*.o'):
+        strPath = str(filePath)
+        pathList.append(strPath)
+    #Function can be passed to mulitple threads for parralel processing
+    #TODO: Split up pathList appropriately and call multiple threads to call objectdump
+    pool = mp.Pool(mp.cpu_count())
+    pool.map(runOnFiles, pathList)
+    pool.close()
+    #runOnFiles(pathList)
 
-        #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
-        shellArgument = "strings -d {objectName} > {outputFolder}{name}{extension}.txt"
-        shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType )
-        print(shellArgument)
-        sp.call(shellArgument, shell = True)
+    endTime = time.time()
+    print(printList)
+    print("Runtime: %s seconds" %(endTime - startTime))
 
 def checkForDifference( givenType ):
     #Checks for difference in the asembly and string output of a set of object files
