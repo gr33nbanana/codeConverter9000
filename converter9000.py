@@ -43,7 +43,7 @@ import shutil
 import multiprocessing as mp
 import time
 
-args = docopt(__doc__, version = '0.2')
+args = docopt(__doc__, version = '2.1')
 #location = './' by default, something like 'D:/Uni/' if specified
 
 def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
@@ -110,13 +110,14 @@ def runMakeCleanBuilt():
         print("Are you sure make file is in this directory?")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fromtype>']):
+    #Given name is a single file PATH when the function is called from multirpocesses Pool function
     fileName = givenName
     #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
-    #shellArgument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
+    #ument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
     shellArgument = "objdump -d {objectName} > {outputFolder}{name}{extension}.asm"
     shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType)
-
-    print(shellArgument)
+    #print(shellArgument)
+    returnArg1 = shellArgument
     #printList.append(shellArgument)
     sp.call(shellArgument, shell = True)
 
@@ -124,9 +125,20 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fr
     shellArgument = "strings -d {objectName} > {outputFolder}{name}{extension}.txt"
     shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType )
 
-    print(shellArgument)
+    #print(shellArgument)
+    returnArg2 = shellArgument
+    returnShellArgument = "{shellArgument1}\n{shellArgument2}".format(shellArgument1 = returnArg1, shellArgument2 = returnArg2)
     #printList.append(shellArgument)
+
     sp.call(shellArgument, shell = True)
+    return returnShellArgument
+
+calledCommands = []
+#mostly a filler function to pass to map_async and get all the shell arguments that are returned
+def testCallBack(resultObject):
+    global calledCommands
+    calledCommands.append(resultObject)
+    print("DONE")
 
 def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     startTime = time.time()
@@ -138,21 +150,36 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     #objdump -d ./folders/file.o > file.o.asm
     #collects .o files recursively
     #Collect print statements here to not run print() all the time
-    printList = []
+    #printList = []
     print("Gathering Assembly code and Strings")
     pathList = []
-    for filePath in pathlib.Path('.').glob('**/*.o'):
-        strPath = str(filePath)
-        pathList.append(strPath)
+    #Makefile provides object file names seperated by space
+    # whereas the docs tell users to seperate by comma
+    if( len(args['--only']) > 0 and args['--fromMake']):
+        changedOFiles = args['--only'][0].split(' ')
+        print(" FILES ASSIGNED TO pathList: ", changedOFiles)
+        pathList = changedOFiles
+    elif( len(args['--only']) > 0 and not args['--fromMake'] ):
+        oFiles = args['--only'][0].split(',')
+        paths = [args['--path'] + name for name in oFiles]
+        pathList = paths
+    else:
+        #pathList has to be made here so that it contains strings and not PosixPaths
+        for filePath in pathlib.Path('.').glob('**/*.o'):
+            strPath = str(filePath)
+            pathList.append(strPath)
     #Function can be passed to mulitple threads for parralel processing
-    #TODO: Split up pathList appropriately and call multiple threads to call objectdump
-    pool = mp.Pool(mp.cpu_count())
-    pool.map(runOnFiles, pathList)
+    #chunkSize can be specified, not much performance increase
+    chunkSize = int(len(pathList) / mp.cpu_count() )
+    pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
+    pool.map_async(runOnFiles, pathList, callback = testCallBack)
     pool.close()
+    pool.join()
+    print(calledCommands)
+    print(len(calledCommands))
     #runOnFiles(pathList)
-
     endTime = time.time()
-    print(printList)
+    #print(printList)
     print("Runtime: %s seconds" %(endTime - startTime))
 
 def checkForDifference( givenType ):
