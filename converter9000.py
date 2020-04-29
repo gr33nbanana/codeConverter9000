@@ -127,7 +127,7 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fr
 
     #print(shellArgument)
     returnArg2 = shellArgument
-    returnShellArgument = "{shellArgument1}\n{shellArgument2}".format(shellArgument1 = returnArg1, shellArgument2 = returnArg2)
+    returnShellArgument = "{shellArgument1}, {shellArgument2}".format(shellArgument1 = returnArg1, shellArgument2 = returnArg2)
     #printList.append(shellArgument)
 
     sp.call(shellArgument, shell = True)
