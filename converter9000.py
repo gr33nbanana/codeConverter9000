@@ -2,7 +2,7 @@
 
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
   converter9000.py hephaestus <fromtype> [--dump_at=<dumppath>]
 
 Commands:
@@ -31,6 +31,7 @@ Options:
   --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
   --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
   --fromMake                Specifies if program is called from a Makefile and doesn't run make built and make clean command lines [default: False]
+  --Hera                    Rejects hephaestus for being ugly, hephaestus() does not run 'make built' or gather .asm files [default: False]
 
 """
 
@@ -160,9 +161,14 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
         print(" FILES ASSIGNED TO pathList: ", changedOFiles)
         pathList = changedOFiles
     elif( len(args['--only']) > 0 and not args['--fromMake'] ):
-        oFiles = args['--only'][0].split(',')
-        paths = [args['--path'] + name for name in oFiles]
-        pathList = paths
+        onlyFiles = args['--only'][0].split(',')
+
+        for file in onlyFiles:
+            oname = pathlib.Path(file).with_suffix('.o')
+            for oPathAndName in pathlib.Path('.').glob(f'**/{oname}'):
+                pathList.append(oPathAndName)
+        #paths = [args['--path'] + name for name in oFiles]
+        #pathList = paths
     else:
         #pathList has to be made here so that it contains strings and not PosixPaths
         for filePath in pathlib.Path('.').glob('**/*.o'):
@@ -227,8 +233,11 @@ def checkForDifference( givenType ):
             sp.call(shellArgument + saveShellArgument ,shell = True)
 
 def hephaestus():
+    if not (args['Hera']):
         runMakeCleanBuilt()
         gatherDumpedOFiles(fileType = args['<fromtype>'])
+    else:
+        print("Hephaestus did not run. Rejected by Hera for being ugly.")
 
 if __name__ == '__main__':
     if(args['convert']):
