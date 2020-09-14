@@ -227,8 +227,8 @@ def checkForDifference( givenType ):
             sp.call(shellArgument + saveShellArgument ,shell = True)
 
 def hephaestus():
-    runMakeCleanBuilt()
-    gatherDumpedOFiles(fileType = args['<fromtype>'])
+        runMakeCleanBuilt()
+        gatherDumpedOFiles(fileType = args['<fromtype>'])
 
 if __name__ == '__main__':
     if(args['convert']):
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     elif(args['sisyphus'] and args['uphill']):
         #Save assembly code if it wasn't done
         if not ( pathlib.Path(args['--dump_at']).exists() ):
-            print("No dumped assembly files detected.\nWill compile program and save assembly code")
+            print("No dumped assembly directory detected.\nWill compile program and save assembly code")
             hephaestus()
 
         #Only convert files and save them with the same name
@@ -256,31 +256,37 @@ if __name__ == '__main__':
 
     elif(args['sisyphus'] and args['downhill']):
         if not ( pathlib.Path(args['--dump_at']).exists() ):
-            print("No dumped assembly files detected. Make sure they exist in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
+            print("No dumped assembly diectory detected. Make sure it exists in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
             raise SystemExit
         #The files should be converted but kept with the same name
         #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
         #TODO: rename changed files to .f90
-        hephaestus()
         if(args['--clean']):
             paths = collectPaths(fromType = '_.f90')
+            maxCount = 30
             for pathName in paths:
-                #print("PATHS: " + str(paths))
-                #pathName   = path/filename_.f90
-                #outputPath = path/filename.f90
-                #remPath    = path/filename.f
-                outputPath = pathName[:-len("_.f90")] + ".f90"
-                remPath = pathName[:-len("_.f90")] + ".f"
-                #Extra formatting for windows
-                pathName = pathName.replace("\\","/")
-                outputPath = outputPath.replace("\\","/")
-                remPath = remPath.replace("\\","/")
+                if(maxCount > 0):
+                    maxCount -= 1
+                    #print("PATHS: " + str(paths))
+                    #pathName   = path/filename_.f90
+                    #outputPath = path/filename.f90
+                    #remPath    = path/filename.f
+                    outputPath = pathName[:-len("_.f90")] + ".f90"
+                    remPath = pathName[:-len("_.f90")] + ".f"
+                    #Extra formatting for windows
+                    pathName = pathName.replace("\\","/")
+                    outputPath = outputPath.replace("\\","/")
+                    remPath = remPath.replace("\\","/")
 
-                shellArg = "{oldFormatPath} > {newFormatPath}".format(oldFormatPath = pathName, newFormatPath = outputPath)
-                print(shellArg)
-                os.rename(pathName, outputPath)
-                os.remove(remPath)
+                    shellArg = "Renaming: {oldFormatPath} > {newFormatPath}".format(oldFormatPath = pathName, newFormatPath = outputPath)
+                    print(shellArg)
+                    os.rename(pathName, outputPath)
+                    os.remove(remPath)
+                else:
+                    raise SystemExit()
+
+        hephaestus()
 
     elif(args['hephaestus']):
         hephaestus()
