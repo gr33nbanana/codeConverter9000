@@ -3,7 +3,7 @@
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
   converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
-  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath>]
+  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -30,8 +30,10 @@ Options:
   --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
   --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
   --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
-  --fromMake                Specifies if program is called from a Makefile and doesn't run make built and make clean command lines [default: False]
+  --fromMake                Specifies if program is called from a Makefile and hephaestus() doesn't run make built and make clean command lines [default: False]
   --Hera                    Rejects hephaestus for being ugly, hephaestus() does not run 'make built' or gather .asm files [default: False]
+  --onlyAssembly            Specifies that only the .asm data should be saved from object files [default: False]
+  --onlyStrings             Specifies that only the .txt string data should be saved from object files [default: False]
 
 """
 
@@ -103,6 +105,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 
 def runMakeCleanBuilt():
     try:
+        #If --fromMake is specified do not call 'make built'
         if not (args['--fromMake']):
             print("Running make cleand and make built")
             sp.call("make clean", shell = True)
@@ -112,29 +115,40 @@ def runMakeCleanBuilt():
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fromtype>']):
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
+    fileName = givenName
     if(args['--fromMake']):
         fileType = ''
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
-    fileName = givenName
-    #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
-    #ument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
-    shellArgument = "objdump -d {objectName} > {outputFolder}{name}{extension}.asm"
-    shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType)
-    #print(shellArgument)
-    returnArg1 = shellArgument
-    #printList.append(shellArgument)
-    sp.call(shellArgument, shell = True)
+    returnArg1 = ''
+    returnArg2 = ''
+    if(not args['--onlyStrings'] or args['--onlyAssembly']):
+        #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
+        #argument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
+        shellArgument = "objdump -d {objectName} > {outputPath}{name}{extension}.asm"
+        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType)
+        #print(shellArgument)
+        #printList.append(shellArgument)\
+        #
+        #!!!!!!
+        #Runs by default, if --onlyStrings is specified, doesnt' run, if --onlyAssembly is specified only this shellarg runs, no string data saved
+        #!!!!!!
+        sp.call(shellArgument, shell = True)
+        returnArg1 = shellArgument
 
-    #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
-    shellArgument = "strings -d {objectName} > {outputFolder}{name}{extension}.txt"
-    shellArgument = shellArgument.format(objectName = fileName, outputFolder = outputFolder, name = os.path.basename(fileName), extension = fileType )
+    if(not args['--onlyAssembly'] or args['--onlyStrings']):
+        #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
+        shellArgument = "strings -d {objectName} > {outputPath}{name}{extension}.txt"
+        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType )
+
+        #printList.append(shellArgument)
+        #!!!!!!
+        #Runs by default, if --onlyAssembly is specified it doesnt' run, if --onlyStrings is specified only this shellarg runs, no string data saved
+        #!!!!!!
+        sp.call(shellArgument, shell = True)
+        returnArg2 = shellArgument
 
     #print(shellArgument)
-    returnArg2 = shellArgument
     returnShellArgument = "{shellArgument1}, {shellArgument2}".format(shellArgument1 = returnArg1, shellArgument2 = returnArg2)
-    #printList.append(shellArgument)
-
-    sp.call(shellArgument, shell = True)
     return returnShellArgument
 
 calledCommands = []
