@@ -103,14 +103,17 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 
 def runMakeCleanBuilt():
     try:
-        print("Running make cleand and make built")
         if not (args['--fromMake']):
+            print("Running make cleand and make built")
             sp.call("make clean", shell = True)
             sp.call("make built", shell = True)
     except:
         print("Are you sure make file is in this directory?")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fromtype>']):
+    #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
+    if(args['--fromMake']):
+        fileType = ''
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     fileName = givenName
     #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
@@ -143,7 +146,9 @@ def testCallBack(resultObject):
 
 def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     startTime = time.time()
-    #fileType is only information about the source of the object files and just gets added to the saved file name
+    #extension is only information about the source of the object files and just gets added to the saved file name
+    if(args['--fromMake']):
+        fileType = ''
     try:
         os.mkdir(outputFolder)
     except:
@@ -164,8 +169,8 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
         onlyFiles = args['--only'][0].split(',')
 
         for file in onlyFiles:
-            oname = pathlib.Path(file).with_suffix('.o')
-            for oPathAndName in pathlib.Path('.').glob(f'**/{oname}'):
+            oName = pathlib.Path(file).with_suffix('.o')
+            for oPathAndName in pathlib.Path('.').glob(f'**/{oName}'):
                 pathList.append(oPathAndName)
         #paths = [args['--path'] + name for name in oFiles]
         #pathList = paths
@@ -233,7 +238,7 @@ def checkForDifference( givenType ):
             sp.call(shellArgument + saveShellArgument ,shell = True)
 
 def hephaestus():
-    if not (args['Hera']):
+    if not (args['--Hera']):
         runMakeCleanBuilt()
         gatherDumpedOFiles(fileType = args['<fromtype>'])
     else:
@@ -271,31 +276,34 @@ if __name__ == '__main__':
         #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
         #TODO: rename changed files to .f90
-        if(args['--clean']):
-            paths = collectPaths(fromType = '_.f90')
-            maxCount = 30
-            for pathName in paths:
-                if(maxCount > 0):
-                    maxCount -= 1
-                    #print("PATHS: " + str(paths))
-                    #pathName   = path/filename_.f90
-                    #outputPath = path/filename.f90
-                    #remPath    = path/filename.f
-                    outputPath = pathName[:-len("_.f90")] + ".f90"
-                    remPath = pathName[:-len("_.f90")] + ".f"
-                    #Extra formatting for windows
-                    pathName = pathName.replace("\\","/")
-                    outputPath = outputPath.replace("\\","/")
-                    remPath = remPath.replace("\\","/")
-
-                    shellArg = "Renaming: {oldFormatPath} > {newFormatPath}".format(oldFormatPath = pathName, newFormatPath = outputPath)
-                    print(shellArg)
-                    os.rename(pathName, outputPath)
-                    os.remove(remPath)
-                else:
-                    raise SystemExit()
-
+        paths = collectPaths(fromType = '_.f90')
+        maxCount = 30
+        for pathName in paths:
+            if(maxCount <= 0):
+                maxCount = 30
+                input("Renaming paused. Check if Version control can handle the amount of renamed files.\nPress any key to continue")
+            maxCount -= 1
+            #print("PATHS: " + str(paths))
+            #pathName   = path/filename_.f90
+            #outputPath = path/filename.f90
+            #oldPath    = path/filename.f
+            outputPath = pathName[:-len("_.f90")] + ".f90"
+            oldPath = pathName[:-len("_.f90")] + ".f"
+            #Extra formatting for windows
+            pathName = pathName.replace("\\","/")
+            outputPath = outputPath.replace("\\","/")
+            oldPath = oldPath.replace("\\","/")
+            if(args['--clean']):
+                os.remove(pathName)
+            try:
+                shellArg = f"git mv {oldPath} {outputPath}"
+                sp.call(shellArg, shell=True)
+                print(shellArg)
+            except:
+                print(f"Could not execute {shellArg}")
+                continue
         hephaestus()
+
 
     elif(args['hephaestus']):
         hephaestus()
