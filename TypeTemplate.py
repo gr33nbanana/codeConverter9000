@@ -3,8 +3,13 @@ class TypeTemplate:
     intIndex = 1
     realIndex = 2
     charIndex = 3
-    template = [ ['IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER()'] ]
+    template = [ [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER()'] ]
     #Lines template
+    def commentToggle(self, idx):
+        if( self.template[idx][1][0] != "!"):
+            self.template[idx][1] ="!" + self.template[idx][1]
+        else:
+            self.template[idx][1] = self.template[idx][1].replace("!","")
 
     def addVariable(self, varName):
         varName = varName.upper()
@@ -18,7 +23,8 @@ class TypeTemplate:
         self.template[typeIndex].append(varName)
         if(self.template[typeIndex][0] == False):
             self.template[typeIndex][0] = True
-            self.template[typeIndex][1] = self.template[typeIndex][1].replace("!","")
+            self.commentToggle(typeIndex)
+            #self.template[typeIndex][1] = self.template[typeIndex][1].replace("!","")
 
     def removeVariable(self, varName):
         #Remove variable:
@@ -28,7 +34,8 @@ class TypeTemplate:
         self.template[typeIndex].remove(varName)
         if( len( self.template[typeIndex] ) == 2 ):
             self.template[typeIndex][0] = False
-            self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
+            self.commentToggle(typeIndex)
+            #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
 
     def determineType(self, varName):
         #DetermineType
@@ -38,12 +45,20 @@ class TypeTemplate:
             return self.intIndex
         else:
             return self.realIndex
+    def getTemplate(self):
+        declarationLines = []
+        for line in self.template:
+            declarationLines.append( line[1] + ", ".join( line[2:] ) )
+        return declarationLines
+
 #%%##############################################################
 tst = TypeTemplate()
 tst.template
-tst.addVariable("amax")
-tst.removeVariable("amax")
-
+#tst.commentToggle(1)
+tst.addVariable("nmax")
+tst.removeVariable("jmax")
+for line in tst.getTemplate():
+    print(line)
 
 ######
 ord('I')<= ord('') <=ord('N')
@@ -54,9 +69,11 @@ idx = 0
 a[idx][1].replace("!","")
 a[idx][1]
 len(a[idx])
-a[idx].append("IMAX")
+#
+a[idx]
+a[idx].append("KMAX")
 a[idx].index("IMAX")
 a[idx].remove("ZMAX")
-', '.join( a[idx][2:] )
+a[idx][1]+', '.join( a[idx][2:] )
 
 a[1][0] = "!"+a[1][0]
