@@ -51,14 +51,16 @@ class TypeTemplate:
             declarationLines.append( line[1] + ", ".join( line[2:] ) )
         return declarationLines
 
+    def printTemplate(self):
+        for line in self.getTemplate():
+            print(line)
 #%%##############################################################
 tst = TypeTemplate()
 tst.template
 #tst.commentToggle(1)
-tst.addVariable("nmax")
-tst.removeVariable("jmax")
-for line in tst.getTemplate():
-    print(line)
+tst.addVariable("zmax")
+tst.removeVariable("kmax")
+tst.printTemplate()
 
 ######
 ord('I')<= ord('') <=ord('N')
