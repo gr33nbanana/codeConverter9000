@@ -1,9 +1,9 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
-  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
+  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath> --withMake] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --withMake --Hera] [--only=<filename>... | --recursive]
+  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath> --fromMake --withMake --onlyAssembly --onlyStrings]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -23,16 +23,29 @@ Arguments:
 
 Options:
   -h --help                 Show this documentation.
+
   --version                 Show version.
-  -p --path=<>              The path of the folder or files to be converted if it is not the current path [default: ./]
+
+  -p --path=<>              The path of the folder or files to be converted if it is not the current path. Include last forward slash. E.g. './work_folder/this_folder/' [default: ./]
+  s
   -r --recursive            If specified the program will run recursively
-  -o --only <name1,name2>   Only convert the given files or files seperated by comma -o file1.txt,file2.cpp...
+
+  -o --only <name1,name2>   Only convert the given files or files seperated by comma.Include file extension.\n\t\t\t    -o file1.txt,file2.cpp,file3.f...
+
   --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
+
   --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
+
   --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
+
   --fromMake                Specifies if program is called from a Makefile and hephaestus() doesn't run make built and make clean command lines [default: False]
+
+  --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+
   --Hera                    Rejects hephaestus for being ugly, hephaestus() does not run 'make built' or gather .asm files [default: False]
+
   --onlyAssembly            Specifies that only the .asm data should be saved from object files [default: False]
+
   --onlyStrings             Specifies that only the .txt string data should be saved from object files [default: False]
 
 """
@@ -44,6 +57,7 @@ import os
 import pathlib
 import shutil
 import multiprocessing as mp
+from functools import partial
 import time
 
 args = docopt(__doc__, version = '2.1')
@@ -106,18 +120,19 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 def runMakeCleanBuilt():
     try:
         #If --fromMake is specified do not call 'make built'
-        if not (args['--fromMake']):
+        if (args['--withMake']):
             print("Running make cleand and make built")
-            sp.call("make clean", shell = True)
-            sp.call("make built", shell = True)
+            #sp.call("make clean", shell = True)
+            #TODO: Check if its make or make built with cmake
+            sp.call("make", shell = True)
     except:
         print("Are you sure make file is in this directory?")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
-def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fromtype>']):
+def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
+    #TODO :: Separate filetype='' from --fromMake. Choosing how the name is saved should be independent from running it from the make file. --formMake coupled with being run from inside a make, as gatherDumpedOFiles seperates with a space ' ' if its given and ',' by comma for the ones specified from the user
     fileName = givenName
-    if(args['--fromMake']):
-        fileType = ''
+
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     returnArg1 = ''
     returnArg2 = ''
@@ -158,11 +173,12 @@ def testCallBack(resultObject):
     calledCommands.append(resultObject)
     print("DONE")
 
-def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
+def gatherDumpedOFiles( extension, outputFolder = args['--dump_at'] ):
     startTime = time.time()
     #extension is only information about the source of the object files and just gets added to the saved file name
-    if(args['--fromMake']):
-        fileType = ''
+    if(args['sisyphus']):
+        extension = ''
+    func = partial(runOnFiles, fileType = extension )
     try:
         os.mkdir(outputFolder)
     except:
@@ -197,9 +213,13 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
     #chunkSize can be specified, not much performance increase
     chunkSize = int(len(pathList) / mp.cpu_count() )
     pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
-    pool.map_async(runOnFiles, pathList, callback = testCallBack)
+    #try:
+    pool.map_async(func, pathList, callback = testCallBack)
+    ##
+    #finally:
     pool.close()
     pool.join()
+    ##
     print(calledCommands)
     print(len(calledCommands))
     #runOnFiles(pathList)
@@ -254,21 +274,53 @@ def checkForDifference( givenType ):
 def hephaestus():
     if not (args['--Hera']):
         runMakeCleanBuilt()
-        gatherDumpedOFiles(fileType = args['<fromtype>'])
+        gatherDumpedOFiles(extension = args['<fromtype>'])
     else:
         print("Hephaestus did not run. Rejected by Hera for being ugly.")
+
+def renameAndClean():
+    """Runs collecTPaths() for '_.f90' helper files and renames the corresponding '.f' files to have the proper '.f90' extension.
+    If '--clean' option is given it will delete the '_.f90' helper files
+    Only renames 30 files then prompts a user key stroke. Pausing is inteded to check if GitKraken or other Version Control has correctly detected a rename."""
+    paths = collectPaths(fromType = '_.f90')
+    maxCount = 30
+    for pathName in paths:
+        if(maxCount <= 0):
+            maxCount = 30
+            #GitKraken cannot process more than 60-120 files at a time, before the changes stop being recognized as rename and become delte + create, loosing the commit history
+            input("Renaming paused. Check if Version control can handle the amount of renamed files.\nPress any key to continue")
+        maxCount -= 1
+        #print("PATHS: " + str(paths))
+        #pathName   = path/filename_.f90
+        #outputPath = path/filename.f90
+        #oldPath    = path/filename.f
+        outputPath = pathName[:-len("_.f90")] + ".f90"
+        oldPath = pathName[:-len("_.f90")] + ".f"
+        #Extra formatting for windows
+        pathName = pathName.replace("\\","/")
+        outputPath = outputPath.replace("\\","/")
+        oldPath = oldPath.replace("\\","/")
+        if(args['--clean']):
+            os.remove(pathName)
+        try:
+            shellArg = f"git mv {oldPath} {outputPath}"
+            sp.call(shellArg, shell=True)
+            print(shellArg)
+        except:
+            print(f"Could not execute {shellArg}")
+            continue
 
 if __name__ == '__main__':
     if(args['convert']):
         #Create Object files from old format types
         runMakeCleanBuilt()
         #Gather the assembly code and string information
-        gatherDumpedOFiles( fileType = args['<fromtype>'] )
+        gatherDumpedOFiles( extension = args['<fromtype>'] )
         filterForType()
         #Re compile the program for new object files
         runMakeCleanBuilt()
         #Gather new assembly code and strings
-        gatherDumpedOFiles( fileType = args['<totype>'] )
+        gatherDumpedOFiles( extension = args['<totype>'] )
         #run diff between the old and new assembly files
         checkForDifference('.asm')
         checkForDifference('.txt')
@@ -289,33 +341,8 @@ if __name__ == '__main__':
         #The files should be converted but kept with the same name
         #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
-        #TODO: rename changed files to .f90
-        paths = collectPaths(fromType = '_.f90')
-        maxCount = 30
-        for pathName in paths:
-            if(maxCount <= 0):
-                maxCount = 30
-                input("Renaming paused. Check if Version control can handle the amount of renamed files.\nPress any key to continue")
-            maxCount -= 1
-            #print("PATHS: " + str(paths))
-            #pathName   = path/filename_.f90
-            #outputPath = path/filename.f90
-            #oldPath    = path/filename.f
-            outputPath = pathName[:-len("_.f90")] + ".f90"
-            oldPath = pathName[:-len("_.f90")] + ".f"
-            #Extra formatting for windows
-            pathName = pathName.replace("\\","/")
-            outputPath = outputPath.replace("\\","/")
-            oldPath = oldPath.replace("\\","/")
-            if(args['--clean']):
-                os.remove(pathName)
-            try:
-                shellArg = f"git mv {oldPath} {outputPath}"
-                sp.call(shellArg, shell=True)
-                print(shellArg)
-            except:
-                print(f"Could not execute {shellArg}")
-                continue
+        #
+        renameAndClean()
         hephaestus()
 
 
