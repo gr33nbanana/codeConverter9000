@@ -10,7 +10,8 @@ class TypeTemplate:
         if( self.template[idx][1][0] != "!"):
             self.template[idx][1] ="!" + self.template[idx][1]
         else:
-            self.template[idx][1] = self.template[idx][1].replace("!","")
+            #exclude first comment character, replacing replaces all '!' which can be used for logical expressions
+            self.template[idx][1][0] = self.template[idx][1][1:]
 
     def addVariable(self, varName):
         """Add a variable to the template list. Case insensitive. Variables are parsed to the proper variable type line by the determineType(varName) method """
@@ -30,15 +31,16 @@ class TypeTemplate:
 
     def removeVariable(self, varName):
         """Removes the given variable from the template and the list of recognizedVariables. Case insensitive"""
-        #Remove variable:
-        ##--if it's the last variable, set flag to False
-        varName = varName.upper()
-        typeIndex = self.determineType(varName)
-        self.template[typeIndex].remove(varName)
-        if( len( self.template[typeIndex] ) == 2 ):
-            self.template[typeIndex][0] = False
-            self.__commentToggle(typeIndex)
-            #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
+        if("(" and ")" not in varName):
+            #Remove variable:
+            ##--if it's the last variable, set flag to False
+            varName = varName.upper()
+            typeIndex = self.determineType(varName)
+            self.template[typeIndex].remove(varName)
+            if( len( self.template[typeIndex] ) == 2 ):
+                self.template[typeIndex][0] = False
+                self.__commentToggle(typeIndex)
+                #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
 
     def determineType(self, varName):
         """Deterines the index in the template list for the given variable.
@@ -69,7 +71,12 @@ class TypeTemplate:
             print(line)
 
     ## TODO: DIMENSION PARSER
-    #
+    #addDimension
+    ##adds new dimension if it's not declared INT(4)(I,J) REAL(8)(I,J,K)...
+    #removeDimension
+    #addArray
+    ## Add variable names to the dimension declaration INT(4)(I,J) :: array1, array2
+    #removeArray
 #%%##############################################################
 tst = TypeTemplate()
 tst.template
