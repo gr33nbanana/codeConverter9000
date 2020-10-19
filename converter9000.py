@@ -123,14 +123,12 @@ def runMakeCleanBuilt():
         if (args['--withMake']):
             print("Running make cleand and make built")
             #sp.call("make clean", shell = True)
-            #TODO: Check if its make or make built with cmake
             sp.call("make", shell = True)
     except:
-        print("Are you sure make file is in this directory?")
+        print("Are you sure make file is in this directory? Run from _build directory")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
-    #TODO :: Separate filetype='' from --fromMake. Choosing how the name is saved should be independent from running it from the make file. --formMake coupled with being run from inside a make, as gatherDumpedOFiles seperates with a space ' ' if its given and ',' by comma for the ones specified from the user
     fileName = givenName
 
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
