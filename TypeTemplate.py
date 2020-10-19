@@ -3,9 +3,9 @@ class TypeTemplate:
     intIndex = 1
     realIndex = 2
     charIndex = 3
-    template = [ [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER()'] ]
+    template = [ [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER() ::'] ]
     #Lines template
-    def commentToggle(self, idx):
+    def __commentToggle(self, idx):
         if( self.template[idx][1][0] != "!"):
             self.template[idx][1] ="!" + self.template[idx][1]
         else:
@@ -23,7 +23,7 @@ class TypeTemplate:
         self.template[typeIndex].append(varName)
         if(self.template[typeIndex][0] == False):
             self.template[typeIndex][0] = True
-            self.commentToggle(typeIndex)
+            self.__commentToggle(typeIndex)
             #self.template[typeIndex][1] = self.template[typeIndex][1].replace("!","")
 
     def removeVariable(self, varName):
@@ -34,7 +34,7 @@ class TypeTemplate:
         self.template[typeIndex].remove(varName)
         if( len( self.template[typeIndex] ) == 2 ):
             self.template[typeIndex][0] = False
-            self.commentToggle(typeIndex)
+            self.__commentToggle(typeIndex)
             #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
 
     def determineType(self, varName):
@@ -44,6 +44,7 @@ class TypeTemplate:
             #INTEGER
             return self.intIndex
         else:
+            #REAL(8)
             return self.realIndex
     def getTemplate(self):
         declarationLines = []
@@ -58,24 +59,29 @@ class TypeTemplate:
 tst = TypeTemplate()
 tst.template
 #tst.commentToggle(1)
-tst.addVariable("zmax")
-tst.removeVariable("kmax")
+tst.addVariable("zMax")
+tst.removeVariable("zmax")
 tst.printTemplate()
 
-######
-ord('I')<= ord('') <=ord('N')
+#%%#####
 
-a = [ [False,'!INTEGER(4) ::'] ]
-idx = 0
 
-a[idx][1].replace("!","")
-a[idx][1]
-len(a[idx])
-#
-a[idx]
-a[idx].append("KMAX")
-a[idx].index("IMAX")
-a[idx].remove("ZMAX")
-a[idx][1]+', '.join( a[idx][2:] )
 
-a[1][0] = "!"+a[1][0]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##
