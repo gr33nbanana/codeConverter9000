@@ -4,6 +4,7 @@ class TypeTemplate:
     realIndex = 2
     charIndex = 3
     template = [ [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER() ::'] ]
+    indentation = 0
     #Lines template
     def __commentToggle(self, idx):
         """Toggle if the line at template[idx] is commented out or not"""
@@ -80,7 +81,7 @@ class TypeTemplate:
         """
         declarationLines = []
         for line in self.template:
-            declarationLines.append( line[1] + ", ".join( line[2:] ) )
+            declarationLines.append( " "*self.indentation + line[1] + ", ".join( line[2:] ) )
         declarationString = ""
         for line in declarationLines:
             declarationString += line + "\n"
