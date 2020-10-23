@@ -18,13 +18,12 @@ class TypeTemplate:
         name --> variable
         name(dim1,dim2..) --> array """
         varName = varName.upper()
-        self.recognizedVariables.append(varName)
         if("(" and ")" not in varName):
             #Add variable:
             ##--Add to list of all variables
-            ##--if first, uncomment (or add '!' when concatinatig dep on flag value)
+            self.recognizedVariables.append(varName)
+            ##--if first, uncomment or add '!' when concatinatig dep on flag value)
             ##--only add as new element to list
-            ##--getTemplate concatinates all the elements on 1 string
             typeIndex = self.determineType(varName)
             self.template[typeIndex].append(varName)
             if(self.template[typeIndex][0] == False):
@@ -35,6 +34,7 @@ class TypeTemplate:
             #name = varName[:varName.index("(")]
             #dimension = varName[varName.index("(") : varName.index(")")]
             #addDimension(dimension)
+            self.recognizedVariables.append(varName)
             self.addArray(varName)
         else:
             raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
@@ -42,7 +42,6 @@ class TypeTemplate:
 
     def removeVariable(self, varName):
         """Removes the given variable from the template and the list of recognizedVariables. Case insensitive"""
-        ##TO DO :: add remove Dimension Remove array
         varName = varName.upper()
         if("(" and ")" not in varName):
             #Remove variable:
@@ -54,6 +53,7 @@ class TypeTemplate:
                 self.__commentToggle(typeIndex)
                 #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
         elif("(" and ")" in varName):
+            self.template[typeIndex].remove(varName)
             self.removeArray(varName)
         else:
             raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
@@ -76,8 +76,8 @@ class TypeTemplate:
             #REAL(8)
             return self.realIndex
     def getTemplate(self):
-        """Returns a list of strings contianing the lines for type declaration
-        ['IMPLICIT NONE', 'INTEGER(4) :: var1,var2', ...]"""
+        """Returns a string contianing the lines for type declaration
+        """
         declarationLines = []
         for line in self.template:
             declarationLines.append( line[1] + ", ".join( line[2:] ) )
@@ -88,8 +88,7 @@ class TypeTemplate:
 
     def printTemplate(self):
         """Prints the lines for type declaration. """
-        for line in self.getTemplate():
-            print(line)
+        print(self.getTemplate())
 
     #ADD :: def toggle IMPLICIT NONE
     #TODO :: ADD option to add indentation to declaration - the same for each line
@@ -135,6 +134,7 @@ class TypeTemplate:
             raise TypeError(f"Unknown type for array {arrayName}")
 
         for idx, line in enumerate(self.template):
+            #Check if line[1] contains all the required keywords: Type, dimension etc
             if(typeStr and dimensionStr in line[1]):
                 self.template[idx].remove(name)
                 arrayRemoved = True
@@ -144,10 +144,6 @@ class TypeTemplate:
 
         if(not arrayRemoved):
             raise AssertionError(f"Array {arrayName} not found in template")
-
-    #removeArray
-
-
 
 #%%##############################################################
 #tst = TypeTemplate()
