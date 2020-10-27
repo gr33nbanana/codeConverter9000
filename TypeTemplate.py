@@ -1,9 +1,11 @@
 class TypeTemplate:
     recognizedVariables = []
-    intIndex = 1
-    realIndex = 2
-    charIndex = 3
-    template = [ [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER() ::'] ]
+    implicitDoubleIndex = 0
+    implicitNoneIndex = 1
+    intIndex = 2
+    realIndex = 3
+    charIndex = 4
+    template = [[False, 'IMPLICIT DOUBLE PRECISION (A-H,O-Z)'], [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER() ::'] ]
     indentation = 0
     #Lines template
     def __commentToggle(self, idx):
@@ -11,8 +13,20 @@ class TypeTemplate:
         if( self.template[idx][1][0] != "!"):
             self.template[idx][1] ="!" + self.template[idx][1]
         else:
-            #exclude first comment character, replacing replaces all '!' which can be used for logical expressions
+            #exclude first comment character
+            #All commenting should be handled by the function so it should always be the first character
             self.template[idx][1] = self.template[idx][1][1:]
+
+    def commentToggleTemplate(self):
+        """Comment or Uncomment the lines of the template with declared variables.
+        Empty decleration lines are commented out by default. """
+        for idx, line in enumerate(self.template):
+            if(line[0]):
+                self.__commentToggle(idx)
+
+    def switchImplicitStatement(self):
+        self.__commentToggle(self.implicitDoubleIndex)
+        self.__commentToggle(self.implicitNoneIndex)
 
     def addVariable(self, varName):
         """Add a variable to the template list. Case insensitive. Variables are parsed to the proper variable type line by the determineType(varName) method
@@ -76,6 +90,7 @@ class TypeTemplate:
         else:
             #REAL(8)
             return self.realIndex
+        #TODO :: Add handling of Character type
     def getTemplate(self):
         """Returns a string contianing the lines for type declaration
         """
@@ -90,11 +105,6 @@ class TypeTemplate:
     def printTemplate(self):
         """Prints the lines for type declaration. """
         print(self.getTemplate())
-
-    #ADD :: def toggle IMPLICIT NONE
-    #TODO :: ADD option to add indentation to declaration - the same for each line
-        #for line in self.template:
-            #line = [False, '!INTEGER(4) ::', 'var1',...,'varN'] etc
     #
     def addArray(self, arrayName):
         arrayName = arrayName.upper()
@@ -103,9 +113,9 @@ class TypeTemplate:
         typeStr = ''
         dimensionStr = f'DIMENSION{dimension}'
         arrayExists = False
-        if(self.determineType(name) == 1):
+        if(self.determineType(name) == self.intIndex):
             typeStr = 'INTEGER(4),'
-        elif(self.determineType(name) == 2):
+        elif(self.determineType(name) == self.realIndex):
             typeStr = 'REAL(8),'
         else:
             raise TypeError(f"Unknown type for array {arrayName}")
@@ -127,9 +137,9 @@ class TypeTemplate:
         typeStr = ''
         dimensionStr = f'DIMENSION{dimension}'
         arrayRemoved = False
-        if(self.determineType(name) == 1):
+        if(self.determineType(name) == self.intIndex):
             typeStr = 'INTEGER(4),'
-        elif(self.determineType(name) == 2):
+        elif(self.determineType(name) == self.realIndex):
             typeStr = 'REAL(8),'
         else:
             raise TypeError(f"Unknown type for array {arrayName}")
@@ -149,9 +159,17 @@ class TypeTemplate:
 #%%##############################################################
 #tst = TypeTemplate()
 #tst.template
-##tst.commentToggle(1)
-#tst.addVariable("KmaxARRAY(KMAX,JMAX)")
+#tst.addVariable("IMAX")
+#tst.commentToggleTemplate()
+#tst.switchImplicitStatement()
 #tst.removeVariable("imaxARRAY(IMAX,JMAX)")
 #print(tst.getTemplate())
+
+
+
+
+
+
+
 
 #%%#####
