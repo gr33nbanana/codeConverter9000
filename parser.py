@@ -38,16 +38,30 @@ for idx, var in enumerate(variablesMatch):
 
 #Create a template and give it the detected indentation
 template = tmp.TypeTemplate()
+#Pass the detected indentaion to the template class
 template.indentation = indentationIdx
 
 for var in variablesMatch:
     #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords
     template.addVariable(var)
+#template.printTemplate()
+#comment out all declared variables, to add only comment lines and save any resulting asm difference
+template.commentToggleTemplate()
 
 with open(filepath,'w') as file:
-    print(f"Opening to write: {filepath}")
+    print(f"Writing commented out template to: {filepath}")
     #Remove previous dimension declaration
-    fileString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
+    writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
     writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+    file.write(writeString)
+print(f"Closed {filepath}")
+#%% Switch Implicit double statement to Implicit none and uncomment template
+template.switchImplicitStatement()
+template.commentToggleTemplate()
+with open(filepath,'w') as file:
+    print(f"Switching to Implicit none and uncommenting template of: {filepath}")
+    #Remove previous dimension declaration
+    writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
+    writeString = writeString[:implicitStartIdx] + template.getTemplate() + writeString[implicitEdnIdx:]
     file.write(writeString)
 print(f"Closed {filepath}")
