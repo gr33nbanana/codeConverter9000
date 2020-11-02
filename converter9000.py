@@ -38,7 +38,7 @@ Options:
 
   --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
 
-  --fromMake                Specifies if program is called from a Makefile and hephaestus() doesn't run make built and make clean command lines [default: False]
+  --fromMake                Specifies if program is called from a Makefile. Files specified with --only are understood to be object files [default: False]
 
   --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
 
@@ -209,7 +209,7 @@ def gatherDumpedOFiles( extension, outputFolder = args['--dump_at'] ):
             pathList.append(strPath)
     #Function can be passed to mulitple threads for parralel processing
     #chunkSize can be specified, not much performance increase
-    chunkSize = int(len(pathList) / mp.cpu_count() )
+    #chunkSize = int(len(pathList) / mp.cpu_count() )
     pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
     #try:
     pool.map_async(func, pathList, callback = testCallBack)
@@ -277,7 +277,7 @@ def hephaestus():
         print("Hephaestus did not run. Rejected by Hera for being ugly.")
 
 def renameAndClean():
-    """Runs collecTPaths() for '_.f90' helper files and renames the corresponding '.f' files to have the proper '.f90' extension.
+    """Runs collectPaths() for '_.f90' helper files and renames the corresponding '.f' files to have the proper '.f90' extension.
     If '--clean' option is given it will delete the '_.f90' helper files
     Only renames 30 files then prompts a user key stroke. Pausing is inteded to check if GitKraken or other Version Control has correctly detected a rename."""
     paths = collectPaths(fromType = '_.f90')
@@ -311,6 +311,7 @@ def renameAndClean():
 if __name__ == '__main__':
     if(args['convert']):
         #Create Object files from old format types
+        #IDEA: can just have it call itself with sisyphus command
         runMakeCleanBuilt()
         #Gather the assembly code and string information
         gatherDumpedOFiles( extension = args['<fromtype>'] )
@@ -325,7 +326,7 @@ if __name__ == '__main__':
 
     elif(args['sisyphus'] and args['uphill']):
         #Save assembly code if it wasn't done
-        if not ( pathlib.Path(args['--dump_at']).exists() ):
+        if not ( pathlib.Path(args['--dump_at']).exists() and args["--Hera"] ):
             print("No dumped assembly directory detected.\nWill compile program and save assembly code")
             hephaestus()
 
@@ -333,8 +334,8 @@ if __name__ == '__main__':
         filterForType(toType = '_.f90', remove = False)
 
     elif(args['sisyphus'] and args['downhill']):
-        if not ( pathlib.Path(args['--dump_at']).exists() ):
-            print("No dumped assembly diectory detected. Make sure it exists in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
+        if not ( pathlib.Path(args['--dump_at']).exists() and args['--Hera'] ):
+            print("WARNING: No dumped assembly directory detected. Make sure it exists in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
             raise SystemExit
         #The files should be converted but kept with the same name
         #Program recompiles with new object files (assumeing old files were changed first)
