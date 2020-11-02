@@ -1,5 +1,7 @@
 import re
 import TypeTemplate as tmp
+#TODO :: Add docopt interface
+# <parse> [--only --recursive:default --control_version_comand:git add -A && git commit default]
 
 #Can replace DIMENSION with any keyword
 #Detects DIMENSION declaration and all line continuations in group 1
@@ -55,8 +57,10 @@ with open(filepath,'w') as file:
     writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
     file.write(writeString)
 print(f"Closed {filepath}")
+#Should do a dumpOfiles here and check for assembly difference
 #%% Switch Implicit double statement to Implicit none and uncomment template
 template.switchImplicitStatement()
+#Uncomment the declaretion lines
 template.commentToggleTemplate()
 with open(filepath,'w') as file:
     print(f"Switching to Implicit none and uncommenting template of: {filepath}")
