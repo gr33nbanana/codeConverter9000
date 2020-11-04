@@ -3,7 +3,7 @@
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath> --withMake] [--only=<filename>... | --recursive]
   converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --withMake --Hera] [--only=<filename>... | --recursive]
-  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath> --fromMake --withMake --onlyAssembly --onlyStrings]
+  converter9000.py hephaestus <fromtype> [--withMake | --withCMake] [--dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -42,6 +42,8 @@ Options:
 
   --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
 
+  --withCMake              Specify if the files are built using CMake instead of make. compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+
   --Hera                    Rejects hephaestus for being ugly, hephaestus() does not run 'make built' or gather .asm files [default: False]
 
   --onlyAssembly            Specifies that only the .asm data should be saved from object files [default: False]
@@ -63,7 +65,17 @@ import time
 args = docopt(__doc__, version = '2.1')
 #location = './' by default, something like 'D:/Uni/' if specified
 
+def compileFiles():
+    """Calls the make or CMake command line for compiling the project.
+    """
+    if(args['--withMake']):
+        sp.call("make built", shell = True)
+    elif(args['--withCMake']):
+        sp.call("cd _build && make", shell= True)
+
 def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
+    """Returns a list of all files in the specified --path with the specified extension <fromtype>
+    """
     globArgument = location + '*%s'%fromType
     if ( args['--recursive'] == True ):
         globArgument = location + '**/*%s'%fromType
@@ -122,8 +134,8 @@ def runMakeCleanBuilt():
         #If --fromMake is specified do not call 'make built'
         if (args['--withMake']):
             print("Running make cleand and make built")
-            #sp.call("make clean", shell = True)
-            sp.call("make", shell = True)
+            #sp.call("make", shell = True)
+            compileFiles()
     except:
         print("Are you sure make file is in this directory? Run from _build directory")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
