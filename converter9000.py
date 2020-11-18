@@ -62,7 +62,7 @@ import multiprocessing as mp
 from functools import partial
 import time
 
-args = docopt(__doc__, version = '2.1')
+args = docopt(__doc__, version = '3.0')
 #location = './' by default, something like 'D:/Uni/' if specified
 
 def compileFiles():
@@ -132,7 +132,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 def runMakeCleanBuilt():
     try:
         #If --fromMake is specified do not call 'make built'
-        if (args['--withMake']):
+        if (args['--withMake'] or args['--withCMake']):
             print("Running make cleand and make built")
             #sp.call("make", shell = True)
             compileFiles()
@@ -188,7 +188,6 @@ def gatherDumpedOFiles( extension, outputFolder = args['--dump_at'] ):
     #extension is only information about the source of the object files and just gets added to the saved file name
     if(args['sisyphus']):
         extension = ''
-    func = partial(runOnFiles, fileType = extension )
     try:
         os.mkdir(outputFolder)
     except:
@@ -223,6 +222,7 @@ def gatherDumpedOFiles( extension, outputFolder = args['--dump_at'] ):
     #chunkSize can be specified, not much performance increase
     #chunkSize = int(len(pathList) / mp.cpu_count() )
     pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
+    func = partial(runOnFiles, fileType = extension )
     #try:
     pool.map_async(func, pathList, callback = testCallBack)
     ##
@@ -235,7 +235,7 @@ def gatherDumpedOFiles( extension, outputFolder = args['--dump_at'] ):
     #runOnFiles(pathList)
     endTime = time.time()
     #print(printList)
-    print("Runtime: %s seconds" %(endTime - startTime))
+    print("Runtime: {duration} seconds".format(duration = (endTime - startTime)) )
 
 def checkForDifference( givenType ):
     #Checks for difference in the asembly and string output of a set of object files
