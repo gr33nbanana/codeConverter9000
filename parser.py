@@ -1,5 +1,10 @@
+#--path --recursive <fromtype> --only
+#
+from docopt import docopt
+from glob import glob
 import re
 import TypeTemplate as tmp
+args = docopt(__doc__, version = '0.1')
 #TODO :: Add docopt interface
 # <parse> [--only --recursive:default --control_version_comand:git add -A && git commit default]
 
@@ -15,23 +20,7 @@ pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\
 
 #TODO :: get filepath as argument
 filepath = './.tests/evdata.f90'
-with open(filepath,'r') as file:
-    print(f"Opening to read: {filepath}")
-    fileString = file.read()
-print(f"Closed {filepath}")
 
-#find DIMENSION declaration
-dimensionLine = pars_DIMENSION.search(fileString)
-#get variabels inside DIMENSION declaration string
-variablesMatch = pars_Vars.findall(dimensionLine.group(1))
-#get postiion of IMPLICIT DOUBLE PRECISION
-#contained in the first matching group
-implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
-implicitStartIdx = implicitDeclaration.start(0)
-implicitEdnIdx = implicitDeclaration.end(0)
-
-#Get the indentation of the DIMENSION declaration
-indentationIdx = dimensionLine.start(0) - fileString[:dimensionLine.start(0)].rfind("\n") -1
 
 for idx, var in enumerate(variablesMatch):
     #Remove all meaningless empty lines to have varibale list be in the form:
@@ -69,3 +58,42 @@ with open(filepath,'w') as file:
     writeString = writeString[:implicitStartIdx] + template.getTemplate() + writeString[implicitEdnIdx:]
     file.write(writeString)
 print(f"Closed {filepath}")
+
+def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
+    """Returns a list of all files in the specified --path with the specified extension <fromtype>
+    """
+    globArgument = location + '*%s'%fromType
+    if ( args['--recursive'] == True ):
+        globArgument = location + '**/*%s'%fromType
+
+    if(len(args['--only']) > 0):
+        #args['--only'][0] is the string "file1.txt,file2.cpp..."
+        #parses the string to a list of file names
+        files = args['--only'][0].split(',')
+        #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
+        paths = [location + name for name in files]
+        #print("PATHS:\n" + str(paths))
+    elif(len(args['--only']) == 0):
+        #paths = glob("full/path/filename(.f)<-dot in fromType string")
+        paths = glob(globArgument, recursive = args['--recursive'])
+    return paths
+
+if __name__ == '__main__':
+    filesToDeclare = collectPaths()
+    for filepath in filesToDeclare:
+        with open(filepath,'r') as file:
+            print(f"Opening to read: {filepath}")
+            fileString = file.read()
+        print(f"Closed {filepath}")
+        #find DIMENSION declaration
+        dimensionLine = pars_DIMENSION.search(fileString)
+        #get variabels inside DIMENSION declaration string
+        variablesMatch = pars_Vars.findall(dimensionLine.group(1))
+        #get postiion of IMPLICIT DOUBLE PRECISION
+        #contained in the first matching group
+        implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
+        implicitStartIdx = implicitDeclaration.start(0)
+        implicitEdnIdx = implicitDeclaration.end(0)
+
+        #Get the indentation of the DIMENSION declaration
+        indentationIdx = dimensionLine.start(0) - fileString[:dimensionLine.start(0)].rfind("\n") -1
