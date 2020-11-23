@@ -1,10 +1,12 @@
+#TODO::docopt string here
 #--path --recursive <fromtype> --only
 #
 from docopt import docopt
 from glob import glob
 import re
 import TypeTemplate as tmp
-args = docopt(__doc__, version = '0.1')
+import subprocess as sp
+args = docopt(__doc__, version = '0.2')
 #TODO :: Add docopt interface
 # <parse> [--only --recursive:default --control_version_comand:git add -A && git commit default]
 
@@ -19,45 +21,6 @@ pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\n")
 
 #TODO :: get filepath as argument
-filepath = './.tests/evdata.f90'
-
-
-for idx, var in enumerate(variablesMatch):
-    #Remove all meaningless empty lines to have varibale list be in the form:
-    #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
-    variablesMatch[idx] = var.replace(" ","")
-
-#Create a template and give it the detected indentation
-template = tmp.TypeTemplate()
-#Pass the detected indentaion to the template class
-template.indentation = indentationIdx
-
-for var in variablesMatch:
-    #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords
-    template.addVariable(var)
-#template.printTemplate()
-#comment out all declared variables, to add only comment lines and save any resulting asm difference
-template.commentToggleTemplate()
-
-with open(filepath,'w') as file:
-    print(f"Writing commented out template to: {filepath}")
-    #Remove previous dimension declaration
-    writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
-    writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
-    file.write(writeString)
-print(f"Closed {filepath}")
-#Should do a dumpOfiles here and check for assembly difference
-#%% Switch Implicit double statement to Implicit none and uncomment template
-template.switchImplicitStatement()
-#Uncomment the declaretion lines
-template.commentToggleTemplate()
-with open(filepath,'w') as file:
-    print(f"Switching to Implicit none and uncommenting template of: {filepath}")
-    #Remove previous dimension declaration
-    writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
-    writeString = writeString[:implicitStartIdx] + template.getTemplate() + writeString[implicitEdnIdx:]
-    file.write(writeString)
-print(f"Closed {filepath}")
 
 def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
     """Returns a list of all files in the specified --path with the specified extension <fromtype>
@@ -97,3 +60,42 @@ if __name__ == '__main__':
 
         #Get the indentation of the DIMENSION declaration
         indentationIdx = dimensionLine.start(0) - fileString[:dimensionLine.start(0)].rfind("\n") -1
+
+        #Parse found variablse to remove any whitespace
+        for idx, var in enumerate(variablesMatch):
+            #Remove all meaningless empty lines to have varibale list be in the form:
+            #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
+            variablesMatch[idx] = var.replace(" ","")
+
+        #Create a template and give it the detected indentation
+        template = tmp.TypeTemplate()
+        #Pass the detected indentaion to the template class
+        template.indentation = indentationIdx
+        for var in variablesMatch:
+            #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords
+            template.addVariable(var)
+
+        with open(filepath,'w') as file:
+            print(f"Writing commented out template to: {filepath}")
+            #Remove previous dimension declaration
+            writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
+            writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+            file.write(writeString)
+        print(f"Closed {filepath}")
+        #TODO::compile and SAVE asm diff from comment lines
+        #convert9000.py hephaestus --withCMake | --withMake
+        sp.call("~/development/codeConverter9000/converter9000.py hephaestus --withCmake", shell = True)
+
+        template.switchImplicitStatement()
+        template.commentToggleTemplate()
+        with open(filepath,'w') as file:
+            print(f"Switching to Implicit none and uncommenting template of: {filepath}")
+            #Remove previous dimension declaration
+            writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
+            writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+            file.write(writeString)
+        print(f"Closed {filepath}")
+
+
+        #TODO::run compilation and parse error message
+        #TODO::either add one by one or in group
