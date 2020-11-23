@@ -131,7 +131,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 
 def runMakeCleanBuilt():
     try:
-        #If --fromMake is specified do not call 'make built'
+        #If --withMake or --withCMake is specified do not call 'make built'
         if (args['--withMake'] or args['--withCMake']):
             print("Running make cleand and make built")
             #sp.call("make", shell = True)
