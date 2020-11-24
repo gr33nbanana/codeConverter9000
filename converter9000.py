@@ -20,6 +20,7 @@ Arguments:
   <totype>           Filetype to convert to only .f90 supported now
   <dumppath>         Folder path where .o file information is saved
   <diffpath>         Folder path where to gather results from diff
+  <filename>         Name of the file to convert including extension.
 
 Options:
   -h --help                 Show this documentation.
