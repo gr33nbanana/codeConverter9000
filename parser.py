@@ -1,5 +1,28 @@
 #TODO::docopt string here
-#--path --recursive <fromtype> --only
+"""Parser.py
+
+Usage:
+  parser.py declare <extension> [--path --version_Control_Command --withMake --withCMake] [--recursive | --only=<filename>...]
+
+Commands:
+  declare         Glob for the specified extension files and declare variables for any file which uses implicit double precision
+Arguments:
+  <extension>     Extension of files to declare variablse of. Should be '.f' or '.f90'
+  <filename>      Name of the file to parse for type declaration including the extension
+Options:
+  -p --path=<>    The path of the folder or files to do type declaration on. Include last forward slash './path/to/folder/' [default: ./]
+
+  --version_Control_Command=<>  Terminal command to execute in order to commit changes to .asm files when needed [default: git add -A && git commit]
+
+  -r --recursive  If specified the program will run recursively
+
+  -o --only <name1,name2>   Only convert the given files or files seperated by comma.Include file extension.For example '-o file1.txt,file2.cpp,file3.f...'
+
+  --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+
+  --withCMake              Specify if the files are built using CMake instead of make. compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+"""
+#--path --recursive <extension> --only
 #
 from docopt import docopt
 from glob import glob
@@ -21,9 +44,16 @@ pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\n")
 
 #TODO :: get filepath as argument
+def compileFiles():
+    """Calls the make or CMake command line for compiling the project.
+    """
+    if(args['--withMake']):
+        sp.call("make built", shell = True)
+    elif(args['--withCMake']):
+        sp.call("cd _build && make", shell= True)
 
-def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
-    """Returns a list of all files in the specified --path with the specified extension <fromtype>
+def collectPaths(location = args['--path'], fromType = args['<extension>']):
+    """Returns a list of all files in the specified --path with the specified extension <extension>
     """
     globArgument = location + '*%s'%fromType
     if ( args['--recursive'] == True ):
@@ -82,9 +112,11 @@ if __name__ == '__main__':
             writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
             file.write(writeString)
         print(f"Closed {filepath}")
-        #TODO::compile and SAVE asm diff from comment lines
+        #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
         sp.call("~/development/codeConverter9000/converter9000.py hephaestus --withCmake", shell = True)
+        terminalargs = args['--version_Control_Command']
+        sp.call(terminalargs, shell = True)
 
         template.switchImplicitStatement()
         template.commentToggleTemplate()
@@ -99,3 +131,6 @@ if __name__ == '__main__':
 
         #TODO::run compilation and parse error message
         #TODO::either add one by one or in group
+#%% Hydrogen test
+import subprocess as sp
+sp.run(["dir"])
