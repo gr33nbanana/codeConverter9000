@@ -17,7 +17,7 @@ Commands:
 
 Arguments:
   <fromtype>         Filetype to be converter only .f supported now
-  <totype>           Filetype to convert to only .f90 supported now
+  <totype>           Filetype to convert to only .F90 supported now
   <dumppath>         Folder path where .o file information is saved
   <diffpath>         Folder path where to gather results from diff
   <filename>         Name of the file to convert including extension.
@@ -37,13 +37,13 @@ Options:
 
   --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
 
-  --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
+  --clean                   Removes all temporary _.F90 files and the corresponding formated .f files and saves a single .F90 file [default: False]
 
   --fromMake                Specifies if program is called from a Makefile. Files specified with --only are understood to be object files [default: False]
 
-  --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+  --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.F90' files are not deleted they will compile and create redundant object files. [default: False]
 
-  --withCMake              Specify if the files are built using CMake instead of make. compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+  --withCMake              Specify if the files are built using CMake instead of make. compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.F90' files are not deleted they will compile and create redundant object files. [default: False]
 
   --Hera                    Rejects hephaestus for being ugly, hephaestus() does not run 'make built' or gather .asm files [default: False]
 
@@ -95,13 +95,13 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
 
 def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
     #location = './' by default, something like 'D:/Uni/' if specified
-    #<fromtype> = '.f' '.f90' contains a dot
-    #<totype>   = '.f' '.f90' contains a dot
+    #<fromtype> = '.f' '.F90' contains a dot
+    #<totype>   = '.f' '.F90' contains a dot
     outputlines = collectPaths()
 
     for basePathAndName in outputlines:
         #basePathAndName contains   'fullpath/filename.f'            | fullpath/filename{fromType}
-        #outPutPathAndName contains 'fullopath/filename_.f90 or .f90 | fullpath/filename{toType}
+        #outPutPathAndName contains 'fullopath/filename_.F90 or .F90 | fullpath/filename{toType}
         outputPathAndName = basePathAndName[: - len(fromType)]
         outputPathAndName = outputPathAndName.__add__(toType)
         #Extra formatting for Windows
@@ -253,7 +253,7 @@ def checkForDifference( givenType ):
     fileLocation = args['--dump_at'] #default ./DumpedFiles/
     outputFolder = args['--diff_at'] #default: ./Diff/
     oldFileType = args['<fromtype>'] #example .f
-    newFileType = args['<totype>']   #example .f90
+    newFileType = args['<totype>']   #example .F90
     #givenType                        example .asm
     diffOptions = " -B -Z --strip-trailing-cr "
 
@@ -290,10 +290,10 @@ def hephaestus():
         print("Hephaestus did not run. Rejected by Hera for being ugly.")
 
 def renameAndClean():
-    """Runs collectPaths() for '_.f90' helper files and renames the corresponding '.f' files to have the proper '.f90' extension.
-    If '--clean' option is given it will delete the '_.f90' helper files
+    """Runs collectPaths() for '_.F90' helper files and renames the corresponding '.f' files to have the proper '.F90' extension.
+    If '--clean' option is given it will delete the '_.F90' helper files
     Only renames 30 files then prompts a user key stroke. Pausing is inteded to check if GitKraken or other Version Control has correctly detected a rename."""
-    paths = collectPaths(fromType = '_.f90')
+    paths = collectPaths(fromType = '_.F90')
     maxCount = 30
     for pathName in paths:
         if(maxCount <= 0):
@@ -302,11 +302,11 @@ def renameAndClean():
             input("Renaming paused. Check if Version control can handle the amount of renamed files.\nPress any key to continue")
         maxCount -= 1
         #print("PATHS: " + str(paths))
-        #pathName   = path/filename_.f90
-        #outputPath = path/filename.f90
+        #pathName   = path/filename_.F90
+        #outputPath = path/filename.F90
         #oldPath    = path/filename.f
-        outputPath = pathName[:-len("_.f90")] + ".f90"
-        oldPath = pathName[:-len("_.f90")] + ".f"
+        outputPath = pathName[:-len("_.F90")] + ".F90"
+        oldPath = pathName[:-len("_.F90")] + ".f"
         #Extra formatting for windows
         pathName = pathName.replace("\\","/")
         outputPath = outputPath.replace("\\","/")
@@ -344,7 +344,7 @@ if __name__ == '__main__':
             hephaestus()
 
         #Only convert files and save them with the same name
-        filterForType(toType = '_.f90', remove = False)
+        filterForType(toType = '_.F90', remove = False)
 
     elif(args['sisyphus'] and args['downhill']):
         if not ( pathlib.Path(args['--dump_at']).exists() and args['--Hera'] ):
