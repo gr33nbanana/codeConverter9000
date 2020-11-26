@@ -323,6 +323,7 @@ def renameAndClean():
 
 if __name__ == '__main__':
     if(args['convert']):
+        #TODO:: Update workflow of convert command
         #Create Object files from old format types
         #IDEA: can just have it call itself with sisyphus command
         runMakeCleanBuilt()
