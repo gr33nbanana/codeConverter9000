@@ -1,3 +1,5 @@
+import warnings
+
 class TypeTemplate:
     recognizedVariables = []
     implicitDoubleIndex = 0
@@ -33,45 +35,51 @@ class TypeTemplate:
         name --> variable
         name(dim1,dim2..) --> array """
         varName = varName.upper()
-        if("(" and ")" not in varName):
-            #Add variable:
-            ##--Add to list of all variables
-            self.recognizedVariables.append(varName)
-            ##--if first, uncomment or add '!' when concatinatig dep on flag value)
-            ##--only add as new element to list
-            typeIndex = self.determineType(varName)
-            self.template[typeIndex].append(varName)
-            if(self.template[typeIndex][0] == False):
-                self.template[typeIndex][0] = True
-                self.__commentToggle(typeIndex)
-                #self.template[typeIndex][1] = self.template[typeIndex][1].replace("!","")
-        elif("(" and ")" in varName):
-            #name = varName[:varName.index("(")]
-            #dimension = varName[varName.index("(") : varName.index(")")]
-            #addDimension(dimension)
-            self.recognizedVariables.append(varName)
-            self.addArray(varName)
+        if(varName not in self.recognizedVariables):
+            if("(" and ")" not in varName):
+                #Add variable:
+                ##--Add to list of all variables
+                self.recognizedVariables.append(varName)
+                ##--if first, uncomment or add '!' when concatinatig dep on flag value)
+                ##--only add as new element to list
+                typeIndex = self.determineType(varName)
+                self.template[typeIndex].append(varName)
+                if(self.template[typeIndex][0] == False):
+                    self.template[typeIndex][0] = True
+                    self.__commentToggle(typeIndex)
+                    #self.template[typeIndex][1] = self.template[typeIndex][1].replace("!","")
+            elif("(" and ")" in varName):
+                #name = varName[:varName.index("(")]
+                #dimension = varName[varName.index("(") : varName.index(")")]
+                #addDimension(dimension)
+                self.recognizedVariables.append(varName)
+                self.__addArray(varName)
+            else:
+                raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
         else:
-            raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
+            warnings.warn(f"Warning variable {varName} already declared, cannot add to template")
 
 
     def removeVariable(self, varName):
         """Removes the given variable from the template and the list of recognizedVariables. Case insensitive"""
         varName = varName.upper()
-        if("(" and ")" not in varName):
-            #Remove variable:
-            ##--if it's the last variable, set flag to False
-            typeIndex = self.determineType(varName)
-            self.template[typeIndex].remove(varName)
-            if( len( self.template[typeIndex] ) == 2 ):
-                self.template[typeIndex][0] = False
-                self.__commentToggle(typeIndex)
-                #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
-        elif("(" and ")" in varName):
-            self.template[typeIndex].remove(varName)
-            self.removeArray(varName)
+        if(varName in self.recognizedVariables):
+            self.recognizedVariables.remove(varName)
+            if("(" and ")" not in varName):
+                #Remove variable:
+                ##--if it's the last variable, set flag to False
+                typeIndex = self.determineType(varName)
+                self.template[typeIndex].remove(varName)
+                if( len( self.template[typeIndex] ) == 2 ):
+                    self.template[typeIndex][0] = False
+                    self.__commentToggle(typeIndex)
+                    #self.template[typeIndex][1] ="!"+self.template[typeIndex][1]
+            elif("(" and ")" in varName):
+                self.__removeArray(varName)
+            else:
+                raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
         else:
-            raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
+            warnings.warn(f"Warning variable {varName} is not present in the template. Cannot remove from template.")
 
 
 
@@ -106,7 +114,7 @@ class TypeTemplate:
         """Prints the lines for type declaration. """
         print(self.getTemplate())
     #
-    def addArray(self, arrayName):
+    def __addArray(self, arrayName):
         arrayName = arrayName.upper()
         name = arrayName[:arrayName.index("(")]
         dimension = arrayName[arrayName.index("(") : arrayName.index(")")+1]
@@ -130,7 +138,7 @@ class TypeTemplate:
         if(not arrayExists):
             self.template.append([True,f"{typeStr}{dimensionStr} ::",name])
 
-    def removeArray(self, arrayName):
+    def __removeArray(self, arrayName):
         arrayName = arrayName.upper()
         name = arrayName[:arrayName.index("(")]
         dimension = arrayName[arrayName.index("(") : arrayName.index(")")+1]
@@ -157,12 +165,13 @@ class TypeTemplate:
             raise AssertionError(f"Array {arrayName} not found in template")
 
 #%%##############################################################
-#tst = TypeTemplate()
-#tst.template
-#tst.addVariable("IMAX")
+tst = TypeTemplate()
+tst.template
+#tst.recognizedVariables
+#tst.addVariable("IMAX(DIM1,DIM2)")
 #tst.commentToggleTemplate()
 #tst.switchImplicitStatement()
-#tst.removeVariable("imaxARRAY(IMAX,JMAX)")
+#tst.removeVariable("IMAX(DIM1,DIM2)")
 #print(tst.getTemplate())
 
 

@@ -2,7 +2,7 @@
 """Parser.py
 
 Usage:
-  parser.py declare <extension> [--path --version_Control_Command --withMake --withCMake] [--recursive | --only=<filename>...]
+  parser.py declare <extension> [--path --version_Control_Command] (--withMake | --withCMake) [--recursive | --only=<filename>...]
 
 Commands:
   declare         Glob for the specified extension files and declare variables for any file which uses implicit double precision
@@ -12,7 +12,7 @@ Arguments:
 Options:
   -p --path=<>    The path of the folder or files to do type declaration on. Include last forward slash './path/to/folder/' [default: ./]
 
-  --version_Control_Command=<>  Terminal command to execute in order to commit changes to .asm files when needed [default: git add -A && git commit]
+  --version_Control_Command=<>  Terminal command to execute in order to commit changes to .asm files when needed [default: git add -A]
 
   -r --recursive  If specified the program will run recursively
 
@@ -29,8 +29,7 @@ from glob import glob
 import re
 import TypeTemplate as tmp
 import subprocess as sp
-args = docopt(__doc__, version = '0.2')
-#TODO :: Add docopt interface
+args = docopt(__doc__, version = '1.0')
 # <parse> [--only --recursive:default --control_version_comand:git add -A && git commit default]
 
 #Can replace DIMENSION with any keyword
@@ -42,8 +41,17 @@ pars_DIMENSION = re.compile(r"DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))",flags = re.
 pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 #Detect IMPLICIT DOUBLE PRECISION declaration
 pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\n")
+#TODO :: create parser for 'undeclared type' of a variable for stderr/stdout
 
-#TODO :: get filepath as argument
+#######Special character for undeclared variable type: ‘ and ’
+
+#TODO :: Seperate running the make file and parsing the error message for variables from the main loop to be able to do it independantly (eg. Fix something by hand with the Dimensions, then just run it for variables.)
+def getMakeCommand():
+    if(args['--withMake']):
+        return "make built"
+    elif(args['--withCMake']):
+        return "cd _build && make"
+
 def compileFiles():
     """Calls the make or CMake command line for compiling the project.
     """
@@ -106,6 +114,8 @@ if __name__ == '__main__':
             template.addVariable(var)
 
         with open(filepath,'w') as file:
+            #TODO:: check if its ok that only type lines are commented, dimensions are uncomentted
+            ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
             print(f"Writing commented out template to: {filepath}")
             #Remove previous dimension declaration
             writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
@@ -114,8 +124,9 @@ if __name__ == '__main__':
         print(f"Closed {filepath}")
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
-        sp.call("~/development/codeConverter9000/converter9000.py hephaestus --withCmake", shell = True)
-        terminalargs = args['--version_Control_Command']
+        sp.call("python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake", shell = True)
+        #TODO:: change getting terminalargs from docopt
+        terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
 
         template.switchImplicitStatement()
@@ -130,7 +141,27 @@ if __name__ == '__main__':
 
 
         #TODO::run compilation and parse error message
+        detectedVariables = []
+        compileArgs = getMakeCommand()
+        proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+        for line in proc.stdout.readlines():
+            line = line.decode("utf-8")
+            if("‘" and "’" in line):
+                variableName = line[line.index("‘")+1 : line.index("’")]
+                detectedVariables.append(variableName)
+        for variable in detectedVariables:
+            template.addVariable(variable)
+        with open(filepath,'w') as file:
+            print(f"Writing declared type variables to: {filepath}")
+            #Remove previous dimension declaration
+            writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
+            writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+            file.write(writeString)
+        print(f"Closed {filepath}")
+        print("Compiling program after Type Declaration:")
+        sp.call(compileArgs, shell = True)
+        input(f"Check {filepath} to see how well the script did")
+
+
         #TODO::either add one by one or in group
 #%% Hydrogen test
-import subprocess as sp
-sp.run(["dir"])
