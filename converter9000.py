@@ -2,8 +2,8 @@
 
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath> --withMake] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --withMake --Hera] [--only=<filename>... | --recursive]
-  converter9000.py hephaestus <fromtype> [--withMake | --withCMake] [--dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera][--withMake | --withCMake] [--only=<filename>... | --recursive]
+  converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -21,9 +21,12 @@ Arguments:
   <dumppath>         Folder path where .o file information is saved
   <diffpath>         Folder path where to gather results from diff
   <filename>         Name of the file to convert including extension.
+  <extension>        Optional extension for saved asm file when running hephaestus
 
 Options:
   -h --help                 Show this documentation.
+
+  --identifier=<extension>               Specify if the saved asm should have a indentifiying extension in thery name e.g.'file.extension.asm' [default: ]
 
   --version                 Show version.
 
@@ -134,7 +137,7 @@ def runMakeCleanBuilt():
     try:
         #If --withMake or --withCMake is specified do not call 'make built'
         if (args['--withMake'] or args['--withCMake']):
-            print("Running make cleand and make built")
+            print("Compiling program")
             #sp.call("make", shell = True)
             compileFiles()
     except:
@@ -184,7 +187,7 @@ def testCallBack(resultObject):
     calledCommands.append(resultObject)
     print("DONE")
 
-def gatherDumpedOFiles( extension, outputFolder = args['--dump_at'] ):
+def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['--dump_at'] ):
     startTime = time.time()
     #extension is only information about the source of the object files and just gets added to the saved file name
     if(args['sisyphus']):
@@ -285,7 +288,7 @@ def checkForDifference( givenType ):
 def hephaestus():
     if not (args['--Hera']):
         runMakeCleanBuilt()
-        gatherDumpedOFiles(extension = args['<fromtype>'])
+        gatherDumpedOFiles()
     else:
         print("Hephaestus did not run. Rejected by Hera for being ugly.")
 
