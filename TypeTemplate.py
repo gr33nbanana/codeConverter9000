@@ -1,14 +1,16 @@
 import warnings
 
 class TypeTemplate:
-    recognizedVariables = []
-    implicitDoubleIndex = 0
-    implicitNoneIndex = 1
-    intIndex = 2
-    realIndex = 3
-    charIndex = 4
-    template = [[False, 'IMPLICIT DOUBLE PRECISION (A-H,O-Z)'], [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER() ::'] ]
-    indentation = 0
+    def __init__(self):
+        self.recognizedVariables = []
+        self.implicitDoubleIndex = 0
+        self.implicitNoneIndex = 1
+        self.intIndex = 2
+        self.realIndex = 3
+        self.charIndex = 4
+        self.template = [[False, 'IMPLICIT DOUBLE PRECISION (A-H,O-Z)'], [False,'!IMPLICIT NONE'], [False,'!INTEGER(4) ::'], [False,'!REAL(8) ::'], [False,'!CHARACTER() ::'] ]
+        self.indentation = 0
+
     #Lines template
     def __commentToggle(self, idx):
         """Toggle if the line at template[idx] is commented out or not"""
@@ -34,6 +36,7 @@ class TypeTemplate:
         """Add a variable to the template list. Case insensitive. Variables are parsed to the proper variable type line by the determineType(varName) method
         name --> variable
         name(dim1,dim2..) --> array """
+        print(f"DEBUGING: variable passed to addVariable: {varName}")
         varName = varName.upper()
         if(varName not in self.recognizedVariables):
             if("(" and ")" not in varName):
@@ -165,8 +168,8 @@ class TypeTemplate:
             raise AssertionError(f"Array {arrayName} not found in template")
 
 #%%##############################################################
-tst = TypeTemplate()
-tst.template
+#tst = TypeTemplate()
+#tst.template
 #tst.recognizedVariables
 #tst.addVariable("IMAX(DIM1,DIM2)")
 #tst.commentToggleTemplate()
