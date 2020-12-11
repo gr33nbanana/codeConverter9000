@@ -68,7 +68,7 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
         paths = holder
         #print(f"returned paths: {paths}")
     except:
-        warnings.warn("Warning: No .gitignore file found, cannot exclude files not under version control in current folder")
+        warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
     return paths
 
 def ifWriter(indent: int, statement: str, value1: str, value2: str, value3: str) -> str:
@@ -78,7 +78,7 @@ def ifWriter(indent: int, statement: str, value1: str, value2: str, value3: str)
 
     value1, value2, value3: Values of arithmetic IF for < 0, == 0, > 0 respectively.
 
-    Returns a string to overwrite the file string between the start of line and end index of the current arithmetic If expression filestring[ line.start() : match.end()]"""
+    Returns a string to overwrite the file string between the start index and end index of the current arithmetic If expression filestring[ match.start() : match.end()]"""
     #Depending on the regex used to parse the file the first IF() statement might not need to be indented. If Multiline is used in the parser, you need indentation, else you don't.
     returnStr = ''
     #if v1 == v2  IF (A <= 0)
@@ -89,16 +89,16 @@ def ifWriter(indent: int, statement: str, value1: str, value2: str, value3: str)
         #Less or equal to 0
         statement = statement[:-1] + ' <= 0) THEN\n'
 
-        returnStr = " "*indent + f"{statement}" + " "*(indent + 2) + f"GOTO {value1}\n" + " "*indent + "ELSE\n" + " "*(indent + 2) + f"GOTO {value3}\n"+ " "*indent +"END IF\n"
+        returnStr = f"{statement}" + " "*(indent + 2) + f"GOTO {value1}\n" + " "*indent + "ELSE\n" + " "*(indent + 2) + f"GOTO {value3}\n"+ " "*indent +"END IF\n"
     elif(value2 == value3):
         statement = statement[:-1] + ' < 0) THEN\n'
 
-        returnStr = " "*indent + f"{statement}" + " "*(indent + 2) + f"GOTO {value1}\n" + " "*indent + "ELSE\n" + " "*(indent + 2) + f"GOTO {value3}\n"+ " "*indent +"END IF\n"
+        returnStr = f"{statement}" + " "*(indent + 2) + f"GOTO {value1}\n" + " "*indent + "ELSE\n" + " "*(indent + 2) + f"GOTO {value3}\n"+ " "*indent +"END IF\n"
     else:
         statement1 = statement[:-1] + ' < 0) THEN\n'
         statement2 = statement[:-1] + ' == 0) THEN\n'
 
-        returnStr = " "*indent + f"{statement1}" + " "*(indent + 2) + f"GOTO {value1}\n" + " "*indent + f"ELSE {statement2}" + " "*(indent + 2) + f"GOTO {value2}\n" + " "*indent +"ELSE\n" + " "*(indent + 2) + f"GOTO {value3}\n" + " "*indent + "END IF\n"
+        returnStr = f"{statement1}" + " "*(indent + 2) + f"GOTO {value1}\n" + " "*indent + f"ELSE {statement2}" + " "*(indent + 2) + f"GOTO {value2}\n" + " "*indent +"ELSE\n" + " "*(indent + 2) + f"GOTO {value3}\n" + " "*indent + "END IF\n"
     return returnStr
 
 if __name__ == '__main__':
@@ -117,7 +117,7 @@ if __name__ == '__main__':
 
                 ifStatementString = ifWriter(indent, match.group(1), match.group(2), match.group(3), match.group(4))
 
-                ifList.append([match.start(0),match.end(4), ifStatementString])
+                ifList.append([match.start(1),match.end(4), ifStatementString])
 
             accumulator = 0
             writeString = fileString
