@@ -65,6 +65,8 @@ import shutil
 import multiprocessing as mp
 from functools import partial
 import time
+import fnmatch
+import warnings
 
 args = docopt(__doc__, version = '3.0')
 #location = './' by default, something like 'D:/Uni/' if specified
@@ -94,6 +96,33 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
     elif(len(args['--only']) == 0):
         #paths = glob("full/path/filename(.f)<-dot in fromType string")
         paths = glob(globArgument, recursive = args['--recursive'])
+    try:
+        with open(".gitignore",'r') as file:
+            print("Reading gitignore file")
+            ignoreInfo = file.readlines()
+            for line in ignoreInfo:
+                if(line[0] == '#'):
+                    ignoreInfo.remove(line)
+        for idx, line in enumerate(ignoreInfo):
+            ignoreInfo[idx] = line.replace("\n", "*")
+            ignoreInfo[idx] = './' + ignoreInfo[idx]
+        print(f"IgnoreInfo: {ignoreInfo}")
+        #print(f"paths pre filter: {type(paths)} \n{paths}")
+
+        paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
+
+        holder = []
+        for path in paths:
+            holder.append(path)
+        #print(f"Holder paths: {holder}")
+        paths = holder
+        #print(f"returned paths: {paths}")
+    except:
+        warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
+        if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
+            pass
+        else:
+            raise SystemExit
     return paths
 
 def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
