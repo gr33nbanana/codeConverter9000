@@ -42,7 +42,7 @@ pars_DIMENSION = re.compile(r"^(?!\!).*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!
 #Detect variabels from Dimension string: anything name(dim1,...,dimN)
 pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 #Detect IMPLICIT DOUBLE PRECISION declaration
-pars_implicit_Double_declaration = re.compile(r"^(?!\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)")
+pars_implicit_Double_declaration = re.compile(r"^(?!\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)", flags = re.IGNORECASE | re.MULTILINE)
 #TODO :: create parser for 'undeclared type' of a variable for stderr/stdout
 
 #######Special character for undeclared variable type: ‘ and ’
@@ -134,8 +134,9 @@ if __name__ == '__main__':
         template = tmp.TypeTemplate()
         #get postiion of IMPLICIT DOUBLE PRECISION
         #contained in the first matching group
-        implicitStartIdx = implicitDeclaration.start(0)
-        implicitEdnIdx = implicitDeclaration.end(0)
+        implicitLineStartIdx = implicitDeclaration.start(0)
+        implicitStartIdx = implicitDeclaration.start(1)
+        implicitEdnIdx = implicitDeclaration.end(1)
         #Get the indentation of the IMPLICIT DOUBLE declaration
         indentationIdx = implicitStartIdx - fileString[:implicitStartIdx].rfind("\n") -1
         #Pass the detected indentaion to the template class
@@ -166,7 +167,7 @@ if __name__ == '__main__':
             if(type(dimensionLine) != type(None)):
                 #Remove previous dimension declaration if there is one
                 writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-            writeString = insertInString(fileString, implicitStartIdx, implicitEdnIdx, template.getTemplate())
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
         #compile and SAVE asm diff from comment lines
@@ -183,7 +184,7 @@ if __name__ == '__main__':
             if(type(dimensionLine) != type(None)):
                 #Remove previous dimension declaration if there is one
                 writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-            writeString = insertInString(fileString, implicitStartIdx, implicitEdnIdx, template.getTemplate())
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
 
@@ -204,7 +205,7 @@ if __name__ == '__main__':
             if(type(dimensionLine) != type(None)):
                 #Remove previous dimension declaration if there is one
                 writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-            writeString = insertInString(fileString, implicitStartIdx, implicitEdnIdx, template.getTemplate())
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
         print("Compiling program after Type Declaration:")
