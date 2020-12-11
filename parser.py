@@ -112,6 +112,10 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
         else:
             raise SystemExit
     return paths
+def insertInString(originalString, cutIndex1, cutIndex2, stringToInsert):
+    """Insert 'stringToInsert' between cutIndex1 and cutIndex2 of the given string 'originalString' returning originalstring[:cutIndex1] + stringToInsert + originalString[cutIndex2:]
+     """
+    return originalString[:cutIndex1] + stringToInsert + originalString[cutIndex2:]
 
 if __name__ == '__main__':
     filesToDeclare = collectPaths()
@@ -120,43 +124,49 @@ if __name__ == '__main__':
             print(f"Opening to read: {filepath}")
             fileString = file.read()
         print(f"Closed {filepath}")
-        #find DIMENSION declaration
-        dimensionLine = pars_DIMENSION.search(fileString)
-        #get variabels inside DIMENSION declaration string
-        variablesMatch = pars_Vars.findall(dimensionLine.group(1))
-        #get postiion of IMPLICIT DOUBLE PRECISION
-        #contained in the first matching group
+        #FIND IMPLICIT DOUBLE PRECISION STATEMENT
         implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
         if(type(implicitDeclaration) == type(None)):
+            #If no IMPLICIT DOUBLE DECLARATION, skip file
             print(f"No IMPLICIT DOUBLE declaration in {filepath}")
             continue
+        #Create a template
+        template = tmp.TypeTemplate()
+        #get postiion of IMPLICIT DOUBLE PRECISION
+        #contained in the first matching group
         implicitStartIdx = implicitDeclaration.start(0)
         implicitEdnIdx = implicitDeclaration.end(0)
-
-        #Get the indentation of the DIMENSION declaration
-        indentationIdx = dimensionLine.start(0) - fileString[:dimensionLine.start(0)].rfind("\n") -1
-
-        #Parse found variablse to remove any whitespace
-        for idx, var in enumerate(variablesMatch):
-            #Remove all meaningless empty lines to have varibale list be in the form:
-            #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
-            variablesMatch[idx] = var.replace(" ","")
-
-        #Create a template and give it the detected indentation
-        template = tmp.TypeTemplate()
+        #Get the indentation of the IMPLICIT DOUBLE declaration
+        indentationIdx = implicitStartIdx - fileString[:implicitStartIdx].rfind("\n") -1
         #Pass the detected indentaion to the template class
         template.indentation = indentationIdx
-        for var in variablesMatch:
-            #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
-            template.addVariable(var)
+
+        #FIND DIMENSION DECLARATION
+        dimensionLine = pars_DIMENSION.search(fileString)
+        #IF a DIMENSION declaration is detected
+        if(type(dimensionLine) != type(None)):
+            #get variabels inside DIMENSION declaration string
+            variablesMatch = pars_Vars.findall(dimensionLine.group(1))
+            #Parse found variablse to remove any whitespace
+            for idx, var in enumerate(variablesMatch):
+                #Remove all meaningless empty lines to have varibale list be in the form:
+                #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
+                variablesMatch[idx] = var.replace(" ","")
+            for var in variablesMatch:
+                #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
+                template.addVariable(var)
+        else:
+            #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
+            pass
 
         with open(filepath,'w') as file:
             #TODO:: check if its ok that only type lines are commented, dimensions are uncomentted
             ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
             print(f"Writing commented out template to: {filepath}")
-            #Remove previous dimension declaration
-            writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
-            writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+            if(type(dimensionLine) != type(None)):
+                #Remove previous dimension declaration if there is one
+                writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
+            writeString = insertInString(fileString, implicitStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
         #compile and SAVE asm diff from comment lines
@@ -170,12 +180,12 @@ if __name__ == '__main__':
         template.commentToggleTemplate()
         with open(filepath,'w') as file:
             print(f"Switching to Implicit none and uncommenting template of: {filepath}")
-            #Remove previous dimension declaration
-            writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
-            writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+            if(type(dimensionLine) != type(None)):
+                #Remove previous dimension declaration if there is one
+                writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
+            writeString = insertInString(fileString, implicitStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
-
 
         #TODO::run compilation and parse error message
         print("Compiling with IMPLICIT NONE statement to get undeclared variables")
@@ -191,9 +201,10 @@ if __name__ == '__main__':
             template.addVariable(variable)
         with open(filepath,'w') as file:
             print(f"Writing declared type variables to: {filepath}")
-            #Remove previous dimension declaration
-            writeString = fileString[:dimensionLine.start(0)] + fileString[dimensionLine.end(1):]
-            writeString = fileString[:implicitStartIdx] + template.getTemplate() + fileString[implicitEdnIdx:]
+            if(type(dimensionLine) != type(None)):
+                #Remove previous dimension declaration if there is one
+                writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
+            writeString = insertInString(fileString, implicitStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
         print("Compiling program after Type Declaration:")
