@@ -121,7 +121,7 @@ if __name__ == '__main__':
     filesToDeclare = collectPaths()
     for filepath in filesToDeclare:
         with open(filepath,'r') as file:
-            print(f"Opening to read: {filepath}")
+            print(f"\nOpening to read: {filepath}")
             fileString = file.read()
         print(f"Closed {filepath}")
         #FIND IMPLICIT DOUBLE PRECISION STATEMENT
@@ -163,13 +163,13 @@ if __name__ == '__main__':
         with open(filepath,'w') as file:
             #TODO:: check if its ok that only type lines are commented, dimensions are uncomentted
             ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
-            print(f"Writing commented out template to: {filepath}")
+            print(f"\nWriting commented out template to: {filepath}")
             if(type(dimensionLine) != type(None)):
                 #Remove previous dimension declaration if there is one
                 writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
             writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
-        print(f"Closed {filepath}")
+        print(f"Closed {filepath}\n")
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
         sp.call("python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake", shell = True)
@@ -180,16 +180,16 @@ if __name__ == '__main__':
         template.switchImplicitStatement()
         template.commentToggleTemplate()
         with open(filepath,'w') as file:
-            print(f"Switching to Implicit none and uncommenting template of: {filepath}")
+            print(f"\nSwitching to Implicit none and uncommenting template of: {filepath}")
             if(type(dimensionLine) != type(None)):
                 #Remove previous dimension declaration if there is one
                 writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
             writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
-        print(f"Closed {filepath}")
+        print(f"Closed {filepath}\n")
 
         #TODO::run compilation and parse error message
-        print("Compiling with IMPLICIT NONE statement to get undeclared variables")
+        print("\nCompiling with IMPLICIT NONE statement to get undeclared variables\n")
         detectedVariables = []
         compileArgs = getMakeCommand()
         proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
@@ -198,6 +198,7 @@ if __name__ == '__main__':
             if("‘" and "’" in line):
                 variableName = line[line.index("‘")+1 : line.index("’")]
                 detectedVariables.append(variableName)
+        print(f"Detected undeclared varaibels:\n {detectedVariables}\n")
         for variable in detectedVariables:
             template.addVariable(variable)
         with open(filepath,'w') as file:
