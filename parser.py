@@ -2,7 +2,7 @@
 """Parser.py
 
 Usage:
-  parser.py declare <extension> [--path=<location> --version_Control_Command] (--withMake | --withCMake) [--recursive | --only=<filename>...]
+  parser.py declare <extension> (--withMake | --withCMake) [--path=<location> --version_Control_Command=<vc_add>] [--recursive | --only=<filename>...]
 
 Commands:
   declare         Glob for the specified extension files and declare variables for any file which uses implicit double precision
@@ -38,7 +38,7 @@ args = docopt(__doc__, version = '1.0')
 #Detects DIMENSION declaration and all line continuations in group 1
 #dimensionPattern = r"DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))"
 ##Assuming that there is only one DIMENSION declaration
-pars_DIMENSION = re.compile(r"DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))",flags = re.IGNORECASE)
+pars_DIMENSION = re.compile(r"^(?!\!).*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!.+(\s+\:))",flags = re.IGNORECASE | re.MULTILINE)
 #Detect variabels from Dimension string: anything name(dim1,...,dimN)
 pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 #Detect IMPLICIT DOUBLE PRECISION declaration
@@ -52,6 +52,8 @@ pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\
 
 
 def getMakeCommand():
+    """" Return a string of the relevant terminal command to compile the program, depending on if --withMake or --withCMake was specified"""
+
     if(args['--withMake']):
         return "make built"
     elif(args['--withCMake']):
@@ -105,6 +107,10 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
         #print(f"returned paths: {paths}")
     except:
         warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
+        if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
+            pass
+        else:
+            raise SystemExit
     return paths
 
 if __name__ == '__main__':
@@ -121,6 +127,9 @@ if __name__ == '__main__':
         #get postiion of IMPLICIT DOUBLE PRECISION
         #contained in the first matching group
         implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
+        if(type(implicitDeclaration) == type(None)):
+            print(f"No IMPLICIT DOUBLE declaration in {filepath}")
+            continue
         implicitStartIdx = implicitDeclaration.start(0)
         implicitEdnIdx = implicitDeclaration.end(0)
 
@@ -138,7 +147,7 @@ if __name__ == '__main__':
         #Pass the detected indentaion to the template class
         template.indentation = indentationIdx
         for var in variablesMatch:
-            #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords
+            #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
             template.addVariable(var)
 
         with open(filepath,'w') as file:
@@ -169,6 +178,7 @@ if __name__ == '__main__':
 
 
         #TODO::run compilation and parse error message
+        print("Compiling with IMPLICIT NONE statement to get undeclared variables")
         detectedVariables = []
         compileArgs = getMakeCommand()
         proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
