@@ -42,7 +42,7 @@ pars_DIMENSION = re.compile(r"^(?!\!).*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!
 #Detect variabels from Dimension string: anything name(dim1,...,dimN)
 pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 #Detect IMPLICIT DOUBLE PRECISION declaration
-pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\n")
+pars_implicit_Double_declaration = re.compile(r"^(?!\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)")
 #TODO :: create parser for 'undeclared type' of a variable for stderr/stdout
 
 #######Special character for undeclared variable type: ‘ and ’
