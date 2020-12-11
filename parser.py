@@ -2,7 +2,7 @@
 """Parser.py
 
 Usage:
-  parser.py declare <extension> [--path --version_Control_Command] (--withMake | --withCMake) [--recursive | --only=<filename>...]
+  parser.py declare <extension> [--path=<location> --version_Control_Command] (--withMake | --withCMake) [--recursive | --only=<filename>...]
 
 Commands:
   declare         Glob for the specified extension files and declare variables for any file which uses implicit double precision
@@ -24,6 +24,8 @@ Options:
 """
 #--path --recursive <extension> --only
 #
+import fnmatch
+import warnings
 from docopt import docopt
 from glob import glob
 import re
@@ -46,6 +48,9 @@ pars_implicit_Double_declaration = re.compile(r".*IMPLICIT.*DOUBLE.*PRECISION.*\
 #######Special character for undeclared variable type: ‘ and ’
 
 #TODO :: Seperate running the make file and parsing the error message for variables from the main loop to be able to do it independantly (eg. Fix something by hand with the Dimensions, then just run it for variables.)
+
+
+
 def getMakeCommand():
     if(args['--withMake']):
         return "make built"
@@ -77,6 +82,29 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
     elif(len(args['--only']) == 0):
         #paths = glob("full/path/filename(.f)<-dot in fromType string")
         paths = glob(globArgument, recursive = args['--recursive'])
+    try:
+        with open(".gitignore",'r') as file:
+            print("Reading gitignore file")
+            ignoreInfo = file.readlines()
+            for line in ignoreInfo:
+                if(line[0] == '#'):
+                    ignoreInfo.remove(line)
+        for idx, line in enumerate(ignoreInfo):
+            ignoreInfo[idx] = line.replace("\n", "*")
+            ignoreInfo[idx] = './' + ignoreInfo[idx]
+        print(f"IgnoreInfo: {ignoreInfo}")
+        #print(f"paths pre filter: {type(paths)} \n{paths}")
+
+        paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
+
+        holder = []
+        for path in paths:
+            holder.append(path)
+        #print(f"Holder paths: {holder}")
+        paths = holder
+        #print(f"returned paths: {paths}")
+    except:
+        warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
     return paths
 
 if __name__ == '__main__':
