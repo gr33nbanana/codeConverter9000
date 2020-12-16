@@ -159,7 +159,8 @@ if __name__ == '__main__':
         else:
             #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
             pass
-
+        #Comment out any found DIMENSION declarations
+        template.commentToggleTemplate()
         with open(filepath,'w') as file:
             #TODO:: check if its ok that only type lines are commented, dimensions are uncomentted
             ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
@@ -195,6 +196,7 @@ if __name__ == '__main__':
         proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
         for line in proc.stdout.readlines():
             line = line.decode("utf-8")
+            print(line)
             if("‘" and "’" in line):
                 variableName = line[line.index("‘")+1 : line.index("’")]
                 detectedVariables.append(variableName)
@@ -209,8 +211,9 @@ if __name__ == '__main__':
             writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
-        print("Compiling program after Type Declaration:")
-        sp.call(compileArgs, shell = True)
+        print("Compiling program after Type Declaration and saving overwriting assembly code:")
+        #sp.call(compileArgs, shell = True)
+        sp.call("python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake", shell = True)
         input(f"Check {filepath} to see how well the script did")
 
 
