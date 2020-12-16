@@ -38,11 +38,11 @@ args = docopt(__doc__, version = '1.0')
 #Detects DIMENSION declaration and all line continuations in group 1
 #dimensionPattern = r"DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))"
 ##Assuming that there is only one DIMENSION declaration
-pars_DIMENSION = re.compile(r"^(?!\!).*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!.+(\s+\:))",flags = re.IGNORECASE | re.MULTILINE)
+pars_DIMENSION = re.compile(r"^(?!.*?\!)\s*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!.+(\s+\:))",flags = re.IGNORECASE | re.MULTILINE)
 #Detect variabels from Dimension string: anything name(dim1,...,dimN)
 pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
 #Detect IMPLICIT DOUBLE PRECISION declaration
-pars_implicit_Double_declaration = re.compile(r"^(?!\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)", flags = re.IGNORECASE | re.MULTILINE)
+pars_implicit_Double_declaration = re.compile(r"^(?!.*?\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)", flags = re.IGNORECASE | re.MULTILINE)
 #TODO :: create parser for 'undeclared type' of a variable for stderr/stdout
 
 #######Special character for undeclared variable type: ‘ and ’
