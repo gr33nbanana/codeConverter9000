@@ -88,10 +88,11 @@ class TypeTemplate:
 
     def determineType(self, varName):
         """Deterines the index in the template list for the given variable.
-        0 - implicit none declaration
-        1 - INTEGER(4)
-        2 - REAL(8)
-        3 - CHARACTER(..)
+        0 - implicit double declaration
+        1 - implicit none declaration
+        2 - INTEGER(4)
+        3 - REAL(8)
+        4 - CHARACTER(..)
         n - others are detected Dimensions """
         #DetermineType
         varName = str(varName).upper()
@@ -121,7 +122,6 @@ class TypeTemplate:
         arrayName = arrayName.upper()
         name = arrayName[:arrayName.index("(")]
         dimension = arrayName[arrayName.index("(") : arrayName.index(")")+1]
-        typeStr = ''
         dimensionStr = f'DIMENSION{dimension}'
         arrayExists = False
         if(self.determineType(name) == self.intIndex):
@@ -130,10 +130,9 @@ class TypeTemplate:
             typeStr = 'REAL(8),'
         else:
             raise TypeError(f"Unknown type for array {arrayName}")
-
         for idx, line in enumerate(self.template):
             #go through lines to check if dimension was declared
-            if(typeStr and dimensionStr in line[1]):
+            if(typeStr in line[1] and dimensionStr in line[1]):
                 #Dimension declaration exists, append the name to the line
                 ## Add variable names to the dimension declaration TYPE,DIMENSION(I,J) :: array1, array2
                 self.template[idx].append(name)
