@@ -31,6 +31,7 @@ from glob import glob
 import re
 import TypeTemplate as tmp
 import subprocess as sp
+from pathlib import Path
 args = docopt(__doc__, version = '1.0')
 # <parse> [--only --recursive:default --control_version_comand:git add -A && git commit default]
 
@@ -136,7 +137,7 @@ if __name__ == '__main__':
         #contained in the first matching group
         implicitLineStartIdx = implicitDeclaration.start(0)
         implicitStartIdx = implicitDeclaration.start(1)
-        implicitEdnIdx = implicitDeclaration.end(1)
+        implicitEndIdx = implicitDeclaration.end(1)
         #Get the indentation of the IMPLICIT DOUBLE declaration
         indentationIdx = implicitStartIdx - fileString[:implicitStartIdx].rfind("\n") -1
         #Pass the detected indentaion to the template class
@@ -146,46 +147,66 @@ if __name__ == '__main__':
         dimensionLine = pars_DIMENSION.search(fileString)
         #IF a DIMENSION declaration is detected
         if(type(dimensionLine) != type(None)):
-            #get variabels inside DIMENSION declaration string
-            variablesMatch = pars_Vars.findall(dimensionLine.group(1))
-            #Parse found variablse to remove any whitespace
-            for idx, var in enumerate(variablesMatch):
-                #Remove all meaningless empty lines to have varibale list be in the form:
-                #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
-                variablesMatch[idx] = var.replace(" ","")
-            for var in variablesMatch:
-                #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
-                template.addVariable(var)
+            if(implicitLineStartIdx > dimensionLine.start(0)):
+                #Make sure DIMENSION declaration is after IMPLICIT declaration, its assumed later when writing to the file
+                warnings.warn("Warning, DIMENSION declaration detected before IMPLICIT declaration. Cannot proceed as script requires IMPLCIT declaration to be first when writing.")
+                raise SystemExit
+
+            #FOR EVERY DIMENSION DECLARATION:
+            dimensionMatches = pars_DIMENSION.finditer(fileString)
+            dimensionList = [] #[[start,length], ...]
+            for matchNum , match in enumerate(dimensionMatches):
+                #append the begining and length of the dimension declaration
+                dimensionList.append([match.start(0),match.end(1) - match.start(0)])
+                #get variabels inside DIMENSION declaration string
+                variablesMatch = pars_Vars.findall(match.group(1))
+                #Parse found variablse to remove any whitespace
+                for idx, var in enumerate(variablesMatch):
+                    #Remove all meaningless empty lines to have varibale list be in the form:
+                    #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
+                    variablesMatch[idx] = var.replace(" ","")
+                for var in variablesMatch:
+                    #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
+                    template.addVariable(var)
+            #DELETE DIMENSION DECLARATIONS HERE
+            accumulator = 0
+            for statement in dimensionList:
+                fileString = insertInString(fileString, statement[0] - accumulator, statement[0] + statement[1] - accumulator, "")
+                accumulator += statement[1]
+            with open(filepath, 'w') as file:
+                file.write(fileString)
+            #Implicit is before -> don't have to keep track of index
         else:
             #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
             pass
-        #Comment out any found DIMENSION declarations
-        template.commentToggleTemplate()
+
         with open(filepath,'w') as file:
-            #TODO:: check if its ok that only type lines are commented, dimensions are uncomentted
+            #Dimensions are uncommented, old dimension declaration is deleted
             ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
             print(f"\nWriting commented out template to: {filepath}")
-            if(type(dimensionLine) != type(None)):
+            #if(type(dimensionLine) != type(None)):
                 #Remove previous dimension declaration if there is one
-                writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
+                #fileString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
+                #print("FILE AFTER DIMENSION CUT: ")
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}\n")
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
-        sp.call("python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake", shell = True)
-        #TODO:: change getting terminalargs from docopt
+        p = Path(f"{filepath}")
+        #CMake has object files named filename.F90.o , need to pass that to converter9000
+        fileName = p.name + ".o"
+        hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={fileName}"
+        print(hephaestusString)
+
+        sp.call(hephaestusString, shell = True)
         terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
-
+        #Switch to Implicit none to gather undeclared variabels
         template.switchImplicitStatement()
-        template.commentToggleTemplate()
         with open(filepath,'w') as file:
-            print(f"\nSwitching to Implicit none and uncommenting template of: {filepath}")
-            if(type(dimensionLine) != type(None)):
-                #Remove previous dimension declaration if there is one
-                writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
+            print(f"\nSwitching to Implicit none: {filepath}")
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}\n")
 
@@ -205,15 +226,34 @@ if __name__ == '__main__':
             template.addVariable(variable)
         with open(filepath,'w') as file:
             print(f"Writing declared type variables to: {filepath}")
-            if(type(dimensionLine) != type(None)):
-                #Remove previous dimension declaration if there is one
-                writeString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEdnIdx, template.getTemplate())
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+            file.write(writeString)
+        print(f"Closed {filepath}")
+        #print("Compiling program after Type Declaration and saving overwriting assembly code:")
+        #Compile to check for undeclared functions
+        print("\nCompiling with IMPLICIT NONE statement to get undeclared functions\n")
+        detectedVariables = []
+        compileArgs = getMakeCommand()
+        proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+        for line in proc.stdout.readlines():
+            line = line.decode("utf-8")
+            print(line)
+            #IDEA :: Add 'and IMPLICIT type' to more thoroughly check erro message
+            if("‘" and "’" in line):
+                variableName = line[line.index("‘")+1 : line.index("’")]
+                detectedVariables.append(variableName)
+        print(f"Detected undeclared functions:\n {detectedVariables}\n")
+        for variable in detectedVariables:
+            template.addVariable(variable)
+        with open(filepath,'w') as file:
+            print(f"Writing declared type functions to: {filepath}")
+            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}")
         print("Compiling program after Type Declaration and saving overwriting assembly code:")
         #sp.call(compileArgs, shell = True)
-        sp.call("python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake", shell = True)
+
+        sp.call(hephaestusString, shell = True)
         input(f"Check {filepath} to see how well the script did")
 
 
