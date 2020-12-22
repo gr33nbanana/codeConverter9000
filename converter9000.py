@@ -3,7 +3,7 @@
 Usage:
   converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath> --withMake] [--only=<filename>... | --recursive]
   converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera][--withMake | --withCMake] [--only=<filename>... | --recursive]
-  converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
+  converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --only=<filename>... --fromMake --onlyAssembly --onlyStrings]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -239,10 +239,9 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
         pathList = changedOFiles
     elif( len(args['--only']) > 0 and not args['--fromMake'] ):
         onlyFiles = args['--only'][0].split(',')
-
-        for file in onlyFiles:
-            oName = pathlib.Path(file).with_suffix('.o')
-            for oPathAndName in pathlib.Path('.').glob(f'**/{oName}'):
+        for fileName in onlyFiles:
+            oName = pathlib.Path(fileName).with_suffix('.o')
+            for oPathAndName in pathlib.Path('.').glob(f"**/{oName}"):
                 pathList.append(oPathAndName)
         #paths = [args['--path'] + name for name in oFiles]
         #pathList = paths
@@ -257,6 +256,7 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
     func = partial(runOnFiles, fileType = extension )
     #try:
+    #print(f"Gathering ASM from : {pathList}")
     pool.map_async(func, pathList, callback = testCallBack)
     ##
     #finally:
