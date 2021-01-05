@@ -39,7 +39,7 @@ class TypeTemplate:
         print(f"DEBUGING: variable passed to addVariable: {varName}")
         varName = varName.upper()
         if(varName not in self.recognizedVariables):
-            if("(" and ")" not in varName):
+            if("(" not in varName and ")" not in varName):
                 #Add variable:
                 ##--Add to list of all variables
                 self.recognizedVariables.append(varName)
@@ -51,7 +51,7 @@ class TypeTemplate:
                     self.template[typeIndex][0] = True
                     self.__commentToggle(typeIndex)
                     #self.template[typeIndex][1] = self.template[typeIndex][1].replace("!","")
-            elif("(" and ")" in varName):
+            elif("(" in varName and ")" in varName):
                 #name = varName[:varName.index("(")]
                 #dimension = varName[varName.index("(") : varName.index(")")]
                 #addDimension(dimension)
@@ -61,7 +61,6 @@ class TypeTemplate:
                 raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
         else:
             warnings.warn(f"Warning variable {varName} already declared, cannot add to template")
-
 
     def removeVariable(self, varName):
         """Removes the given variable from the template and the list of recognizedVariables. Case insensitive"""
@@ -83,9 +82,7 @@ class TypeTemplate:
                 raise SyntaxError(f"Could not identify type of {varName}. If an array make sure to include the dimension in brackets 'name(dim1,dim2,...)'")
         else:
             warnings.warn(f"Warning variable {varName} is not present in the template. Cannot remove from template.")
-
-
-
+#
     def determineType(self, varName):
         """Deterines the index in the template list for the given variable.
         0 - implicit double declaration
@@ -121,7 +118,7 @@ class TypeTemplate:
     def __addArray(self, arrayName):
         arrayName = arrayName.upper()
         name = arrayName[:arrayName.index("(")]
-        dimension = arrayName[arrayName.index("(") : arrayName.index(")")+1]
+        dimension = arrayName[arrayName.index("(") : arrayName.rfind(")")+1]
         dimensionStr = f'DIMENSION{dimension}'
         arrayExists = False
         if(self.determineType(name) == self.intIndex):
@@ -143,7 +140,7 @@ class TypeTemplate:
     def __removeArray(self, arrayName):
         arrayName = arrayName.upper()
         name = arrayName[:arrayName.index("(")]
-        dimension = arrayName[arrayName.index("(") : arrayName.index(")")+1]
+        dimension = arrayName[arrayName.index("(") : arrayName.rfind(")")+1]
         typeStr = ''
         dimensionStr = f'DIMENSION{dimension}'
         arrayRemoved = False

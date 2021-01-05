@@ -41,7 +41,7 @@ args = docopt(__doc__, version = '1.0')
 ##Assuming that there is only one DIMENSION declaration
 pars_DIMENSION = re.compile(r"^(?!.*?\!)\s*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!.+(\s+\:))",flags = re.IGNORECASE | re.MULTILINE)
 #Detect variabels from Dimension string: anything name(dim1,...,dimN)
-pars_Vars = re.compile(r"[\w\s]*\(.*?\)")
+pars_Vars = re.compile(r"[\w\s]*\(.*?\)+")
 #Detect IMPLICIT DOUBLE PRECISION declaration
 pars_implicit_Double_declaration = re.compile(r"^(?!.*?\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)", flags = re.IGNORECASE | re.MULTILINE)
 #TODO :: create parser for 'undeclared type' of a variable for stderr/stdout
@@ -200,6 +200,7 @@ if __name__ == '__main__':
         print(hephaestusString)
 
         sp.call(hephaestusString, shell = True)
+        #TODO :: actually make terminalargs be set from docopt
         terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
         #Switch to Implicit none to gather undeclared variabels
@@ -218,7 +219,7 @@ if __name__ == '__main__':
         for line in proc.stdout.readlines():
             line = line.decode("utf-8")
             print(line)
-            if("‘" and "’" in line):
+            if("Error" in line and "‘" in line and "’" in line and "IMPLICIT type" in line):
                 variableName = line[line.index("‘")+1 : line.index("’")]
                 detectedVariables.append(variableName)
         print(f"Detected undeclared varaibels:\n {detectedVariables}\n")
@@ -239,7 +240,7 @@ if __name__ == '__main__':
             line = line.decode("utf-8")
             print(line)
             #IDEA :: Add 'and IMPLICIT type' to more thoroughly check erro message
-            if("‘" and "’" in line):
+            if("‘" in line and "’" in line):
                 variableName = line[line.index("‘")+1 : line.index("’")]
                 detectedVariables.append(variableName)
         print(f"Detected undeclared functions:\n {detectedVariables}\n")
