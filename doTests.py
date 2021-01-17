@@ -21,27 +21,36 @@ test_str = ("   DO 50 I=2,ITOT\n"
 	"   DO 72 J=1,63\n"
 	"72 NTO(J) = 1\n")
 
-regex = r".*?DO.*?(\d+)[\s\S]*?(?=\n\d+)"
+regex = r"(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\d+))"
 matches = re.finditer(regex, test_str, re.MULTILINE | re.IGNORECASE)
-
 
 doidx = []
 for matchNum, match in enumerate(matches):
 	print(f"matchNum: {matchNum}")
-	doidx.append(match.end())
+	#Group 1 -- indentation
+	#Group 2 -- first Address of DO LOOP
+	#Group 3 -- exit Address of DO LOOP
+	indentation = " "*(match.end(1) - match.start(1))
+	doidx.append([indentation, [match.start(2),match.end(2)], [match.start(3), match.end(3)]])
 doidx
 #doidx
-flag = "HERE\n"
-displace = len(flag)
+flagEND_DO = 'END DO\n'
 
 accumulator = 0
-for idx in doidx:
-	#0...n
-	removed = test_str[idx + 1 + accumulator:].find('\n')+1
-	test_str = test_str[:idx + 1 + accumulator] + flag + test_str[idx + 1 + accumulator + removed:]
-	accumulator += displace - removed
-	#
+for idxPair in doidx:
+	#Replace first Address with whiteSpace
+	test_str = test_str[ : idxPair[1][0]] + " "*(idxPair[1][1] - idxPair[1][0]) + test_str[idxPair[1][1] : ]
+	#Replace second Address with whiteSpace
+	test_str = test_str[ : idxPair[2][0]] + " "*(idxPair[2][1] - idxPair[2][0]) + test_str[idxPair[2][1] : ]
+print("TEST STRING AFTER REMOVING DO ADDRESSES:")
+print(test_str)
 
+for idxPair in doidx:
+	#Line after last Do statement
+	newLineIdx = accumulator + idxPair[2][1] + test_str[accumulator + idxPair[2][1]: ].find('\n') + 1
+	test_str = test_str[ : newLineIdx] + idxPair[0] + flagEND_DO + test_str[newLineIdx : ]
+	accumulator += len(idxPair[0]) + len(flagEND_DO)
+print("TEST STRING AFTER ADDING END DO STATEMENT:")
 print(test_str)
 
 #
