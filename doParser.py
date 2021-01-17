@@ -33,7 +33,7 @@ import time
 #TODO :: add docopt documentation
 args = docopt(__doc__, version = '1.0')
 
-regex = r"(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\d+))"
+regex = r"^(?!\!)(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\d+))"
 def getMakeCommand():
     """" Return a string of the relevant terminal command to compile the program, depending on if --withMake or --withCMake was specified"""
 
