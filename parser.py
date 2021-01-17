@@ -255,6 +255,7 @@ if __name__ == '__main__':
         #sp.call(compileArgs, shell = True)
 
         sp.call(hephaestusString, shell = True)
+        print('\a')
         input(f"Check {filepath} to see how well the script did")
 
 
