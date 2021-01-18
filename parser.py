@@ -7,7 +7,7 @@ Usage:
 Commands:
   declare         Glob for the specified extension files and declare variables for any file which uses implicit double precision
 Arguments:
-  <extension>     Extension of files to declare variablse of. Should be '.f' or '.f90'
+  <extension>     Extension of files to declare variablse of. Should be '.f' or '.F90'
   <filename>      Name of the file to parse for type declaration including the extension
 Options:
   -p --path=<>    The path of the folder or files to do type declaration on. Include last forward slash './path/to/folder/' [default: ./]
@@ -16,7 +16,7 @@ Options:
 
   -r --recursive  If specified the program will run recursively
 
-  -o --only <name1,name2>   Only convert the given files or files seperated by comma.Include file extension.For example '-o file1.txt,file2.cpp,file3.f...'
+  -o --only <name1,name2>   Only convert the given files or files seperated by comma. Include file extension. For example '-o file1.txt,file2.cpp,file3.f...'
 
   --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
 
