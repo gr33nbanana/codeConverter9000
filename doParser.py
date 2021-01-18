@@ -114,28 +114,33 @@ if __name__ == '__main__':
 			continue
 		#While there are labeled do loops
 		while(type(doLoopExists != type(None) )):
+			#Read latest file version
+			with open(filepath, 'r') as file:
+				test_str = file.read()
 			#test_str is the file_string
-			matches = re.finditer(regex, test_str, re.MULTILINE | re.IGNORECASE)
+			match = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
 			doidx = []
 
-			for matchNum, match in enumerate(matches):
-				#Get positions of all old DO statements
-				print(f"matchNum: {matchNum}")
-				#Group 1 -- indentation
-				#Group 2 -- first Address of DO LOOP
-				#Group 3 -- exit Address of DO LOOP
-				indentation = " "*(match.end(1) - match.start(1))
-				#FIND WHERE THE GOTO LABEL IS
-				labelVal = match.group(2)
-				labelRegex = r"^" + labelVal
-				restOfString = test_str[match.end(2): ]
-				labelMatch = re.search(labelRegex, restOfString, re.MULTILINE)
-				if(type(labelMatch) == type(None)):
-					warnings.warn(f"WARNING! Detected GOTO label {labelVal} could not be fould with regex {labelRegex} after DO statement at {match.start(1)}")
-					raise SystemExit
-				labelIdx = labelMatch.start()
+			#for matchNum, match in enumerate(matches):
+			#Get positions of all old DO statements
+			#print(f"matchNum: {matchNum}")
+			#Group 1 -- indentation
+			#Group 2 -- first Address of DO LOOP
+			#Group 3 -- exit Address of DO LOOP
+			indentation = " "*(match.end(1) - match.start(1))
+			#FIND WHERE THE GOTO LABEL IS
+			labelVal = match.group(2)
+			labelRegex = r"^" + labelVal
+			restOfString = test_str[match.end(2) : ]
+			labelMatch = re.search(labelRegex, restOfString, re.IGNORECASE | re.MULTILINE)
 
-				doidx.append([indentation, [match.start(2),match.end(2)], [labelMatch.start(), labelMatch.end()]])
+			labelStart = int(match.end(2)) + int(labelMatch.start())
+			labelEnd = int(match.end(2)) + int(labelMatch.end())
+			if(type(labelMatch) == type(None)):
+				warnings.warn(f"WARNING! Detected GOTO label {labelVal} could not be fouln with regex {labelRegex} after DO statement at {match.start(1)}")
+				raise SystemExit
+
+			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
 
 			#Add END DO line as a comment (don't Change anything else)
 			commented_string = test_str
@@ -159,6 +164,9 @@ if __name__ == '__main__':
 			#compile and SAVE asm diff from comment lines
 	        #convert9000.py hephaestus --withCMake | --withMake
 			p = Path(f"{filepath}")
+
+			#Get only filename for commits
+			commitName = Path(f"{filepath}").name
 	        #CMake has object files named filename.F90.o , need to pass that to converter9000
 			fileName = p.name + ".o"
 			hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={fileName}"
@@ -167,7 +175,7 @@ if __name__ == '__main__':
 			sp.call(hephaestusString, shell = True)
 
 			#Call git add && git commit
-			gitCommentCommitArg = f"git add -A && git commit -m 'Commit comment changes in {filepath}'"
+			gitCommentCommitArg = f"git add -A && git commit -m 'Commit comment changes in {commitName}'"
 			print(gitCommentCommitArg)
 			sp.call(gitCommentCommitArg, shell=True)
 			#Wait 5 seconds just in case, for gitKraken to register any asm code change
@@ -191,6 +199,7 @@ if __name__ == '__main__':
 				accumulator += len(idxPair[0]) + len(flagEND_DO)
 			#print("TEST STRING AFTER ADDING END DO STATEMENT:")
 			#print(test_str)
+			#TODO::: CODE GETS CUT UP WRONG
 			with open(filepath, 'w') as file:
 				file.write(test_str)
 			#Save new assembly code after chaning DO LOOP
@@ -198,7 +207,7 @@ if __name__ == '__main__':
 			sp.call(hephaestusString, shell = True)
 
 			#Git commit -- this is after DO loop has been changed
-			gitCommitArg = f"git add -A && git commit -m 'Change DO_LOOP in {filepath}'"
+			gitCommitArg = f"git add -A && git commit -m 'Change DO_LOOP in {commitName}'"
 			print(gitCommitArg)
 			sp.call(gitCommitArg, shell = True)
 			#Wait 5 seconds just in case, for gitKraken to register any asm code change
@@ -206,3 +215,8 @@ if __name__ == '__main__':
 			#####################################
 			# Check if there are SUB DO loops with labels
 			doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
+			if(type(doLoopExists) == type(None)):
+				input("No more DO LOOPS detected, press any key to go to next file")
+			else:
+				input("More DO LOOPs detected, press any key to continue.")
+		print(f"Finished DO LOOP update in {filepath}")
