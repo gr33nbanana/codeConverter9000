@@ -137,7 +137,7 @@ if __name__ == '__main__':
 			labelStart = int(match.end(2)) + int(labelMatch.start())
 			labelEnd = int(match.end(2)) + int(labelMatch.end())
 			if(type(labelMatch) == type(None)):
-				warnings.warn(f"WARNING! Detected GOTO label {labelVal} could not be fouln with regex {labelRegex} after DO statement at {match.start(1)}")
+				warnings.warn(f"WARNING! Detected GOTO label {labelVal} could not be found with regex {labelRegex} after DO statement at {match.start(1)}")
 				raise SystemExit
 
 			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
@@ -171,8 +171,21 @@ if __name__ == '__main__':
 			fileName = p.name + ".o"
 			hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={fileName}"
 			print(hephaestusString)
+
 			#call sisyphus to compile asm
-			sp.call(hephaestusString, shell = True)
+			#Check if program compiles
+			proc = sp.Popen(hephaestusString, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+			flagWATCHDOG = False
+			for line in proc.stdout.readline():
+				line = line.decode("utf-8")
+				print(line)
+				if('100%' in line and 'watchdog' in line):
+					flagWATCHDOG = True
+
+			if(not flagWATCHDOG):
+				print("Program did not compile")
+				print('\a')
+				raise SystemExit
 
 			#Call git add && git commit
 			gitCommentCommitArg = f"git add -A && git commit -m 'Commit comment changes in {commitName}'"
@@ -204,7 +217,33 @@ if __name__ == '__main__':
 				file.write(test_str)
 			#Save new assembly code after chaning DO LOOP
 			print(hephaestusString)
-			sp.call(hephaestusString, shell = True)
+			#Check if program compiles
+			proc = sp.Popen(hephaestusString, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+			flagWATCHDOG = False
+			for line in proc.stdout.readline():
+				line = line.decode("utf-8")
+				print(line)
+				if('100%' in line and 'watchdog' in line):
+					flagWATCHDOG = True
+
+			if(not flagWATCHDOG):
+				print("Program did not compile")
+				print('\a')
+				raise SystemExit
+
+			#Call GIT STATUS to check if there is assembly difference
+			gitStatusStr = "git status"
+			proc = sp.Popen(gitStatusStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+			flagASM = False
+			for line in proc.stdout.readlines():
+				line = line.decode("utf-8")
+				print(line)
+				if('modified:' in line and 'DumpedFiles' in line and '.asm' in line):
+					flagASM = True
+			if(flagASM):
+				print("Detected assembly difference")
+				print('\a')
+				raise SystemExit
 
 			#Git commit -- this is after DO loop has been changed
 			gitCommitArg = f"git add -A && git commit -m 'Change DO_LOOP in {commitName}'"
@@ -219,4 +258,4 @@ if __name__ == '__main__':
 				input("No more DO LOOPS detected, press any key to go to next file")
 			else:
 				input("More DO LOOPs detected, press any key to continue.")
-		print(f"Finished DO LOOP update in {filepath}")
+		#print(f"Finished DO LOOP update in {filepath}")
