@@ -1,4 +1,3 @@
-#TODO::docopt string here
 """Parser.py
 
 Usage:
@@ -50,10 +49,6 @@ pars_Vars = re.compile(r"[\w\s]*\(.*?\)+")
 pars_implicit_Double_declaration = re.compile(r"^(?!.*?\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)", flags = re.IGNORECASE | re.MULTILINE)
 
 #######Special character for undeclared variable type: ‘ and ’
-
-#TODO :: Seperate running the make file and parsing the error message for variables from the main loop to be able to do it independantly (eg. Fix something by hand with the Dimensions, then just run it for variables.)
-
-
 
 def getMakeCommand():
     """" Return a string of the relevant terminal command to compile the program, depending on if --withMake or --withCMake was specified"""
@@ -152,7 +147,6 @@ if __name__ == '__main__':
         ##########################################
         dimensionLine = pars_DIMENSION.search(fileString)
         #IF a DIMENSION declaration is detected
-        #TODO :: DO NOT REMOVE OLD DECLARATION,but comment out
         dimensionCommentIdx = [] #[[idxToAddComment1, ... idxToAddCommentN], ... ,[ ==//==]]
         if(type(dimensionLine) != type(None)):
             if(implicitLineStartIdx > dimensionLine.start(0)):
@@ -164,14 +158,15 @@ if __name__ == '__main__':
             dimensionMatches = pars_DIMENSION.finditer(fileString)
             for matchNum , match in enumerate(dimensionMatches):
                 #Save the idx of where comments need to be inserted
-                idxToComment = []
-                #Add start of line of DIMENSION
-                idxToComment.append(match.group(0).rfind('\n') + 1)
+                #Add start index at start of line of DIMENSION
+                dimString = fileString[:match.start(1)]
+                dimensionCommentIdx.append( dimString.rfind('\n') + 1 )
 
                 #In the declared Dimensions find all new lines and add the next index to the list. Exclude last '\n' from the string
                 for idx,letter in enumerate(match.group(1)[:-1]):
                     if(letter == '\n'):
-                        idxToComment.append(match.start(1) + idx + 1)
+                        dimensionCommentIdx.append(match.start(1) + idx + 1)
+                ##dimensionCommentIdx now has all indecies to put a comment at
                 #get variabels inside DIMENSION declaration string
                 variablesMatch = pars_Vars.findall(match.group(1))
                 #Parse found variablse to remove any whitespace
@@ -182,30 +177,19 @@ if __name__ == '__main__':
                 for var in variablesMatch:
                     #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
                     template.addVariable(var)
-            ###################################
-            #DELETE DIMENSION DECLARATIONS HERE
-            #####################################
-            #TODO: Change Deletion to storing where to put comments
-            accumulator = 0
-            for statement in dimensionCommentIdx:
-                fileString = insertInString(fileString, statement[0] - accumulator, statement[0] + statement[1] - accumulator, "")
-                accumulator += statement[1]
-            with open(filepath, 'w') as file:
-                file.write(fileString)
-            #Implicit is before -> don't have to keep track of index
+
+            ############################################
+            #Comment out DIMENSION Declaration in TEMPLATE
+            template.commentToggleTemplate()
+            ############################################
         else:
             #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
             pass
 
-        #TODO : Comment out found dimensions to add only a fully comented out template
         with open(filepath,'w') as file:
-            #Dimensions are uncommented, old dimension declaration is deleted
-            ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
+            #Dimensions are commented out, old dimension declaration is stil there
+            ## NOTE --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
             print(f"\nWriting commented out template to: {filepath}")
-            #if(type(dimensionLine) != type(None)):
-                #Remove previous dimension declaration if there is one
-                #fileString = insertInString(fileString, dimensionLine.start(0), dimensionLine.end(1), "")
-                #print("FILE AFTER DIMENSION CUT: ")
             writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}\n")
@@ -221,13 +205,39 @@ if __name__ == '__main__':
         ###########################################
         #STAGE ANY ASM DIFFERENCES FROM COMMENTS
         ###########################################
+        input("Check how well script added commented template: Press any key to continue")
         terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
+        #DEBUGING: wait for user to check
+
         #######################################################
         #Switch to Implicit none to gather undeclared variabels
         #######################################################
+        #Uncomment Dimension declarations
+        template.commentToggleTemplate()
+        #change filestring and write to file
+        if(len(dimensionCommentIdx) > 0):
+            comment_accumulator = 0
+            for commentidx in dimensionCommentIdx:
+                commentidx += comment_accumulator
+                fileString = insertInString(fileString,commentidx,commentidx,"!")
+                comment_accumulator += len("!")
+        #Presumably now all DIMENSION lines are commented out
+        with open(filepath, 'w') as file:
+            file.write(fileString)
 
-        #TODO : Comment out Old dimension declaraions
+        ###################################################
+        # Re evaluate implicit declaration index
+        with open(filepath, 'r') as file:
+            fileString = file.read()
+        #
+        implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
+        #get postiion of IMPLICIT DOUBLE PRECISION
+        #contained in the first matching group
+        implicitLineStartIdx = implicitDeclaration.start(0)
+        implicitStartIdx = implicitDeclaration.start(1)
+        implicitEndIdx = implicitDeclaration.end(1)
+        #################################################
 
         template.switchImplicitStatement()
         with open(filepath,'w') as file:
@@ -282,15 +292,9 @@ if __name__ == '__main__':
             file.write(writeString)
         print(f"Closed {filepath}")
         print("Compiling program after Type Declaration and saving overwriting assembly code:")
-        #sp.call(compileArgs, shell = True)
         ################################################################
         #Overwrite ASM code and wait for input to continue
         ###############################################################
         sp.call(hephaestusString, shell = True)
         print('\a')
         input(f"Check {filepath} to see how well the script did")
-
-
-        #TODO::either add one by one or in group
-#%% Hydrogen test
-#Testing
