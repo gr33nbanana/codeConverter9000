@@ -147,10 +147,13 @@ if __name__ == '__main__':
         indentationIdx = implicitStartIdx - fileString[:implicitStartIdx].rfind("\n") -1
         #Pass the detected indentaion to the template class
         template.indentation = indentationIdx
-
+        ###########################################
         #FIND DIMENSION DECLARATION
+        ##########################################
         dimensionLine = pars_DIMENSION.search(fileString)
         #IF a DIMENSION declaration is detected
+        #TODO :: DO NOT REMOVE OLD DECLARATION,but comment out
+        dimensionCommentIdx = [] #[[idxToAddComment1, ... idxToAddCommentN], ... ,[ ==//==]]
         if(type(dimensionLine) != type(None)):
             if(implicitLineStartIdx > dimensionLine.start(0)):
                 #Make sure DIMENSION declaration is after IMPLICIT declaration, its assumed later when writing to the file
@@ -159,10 +162,16 @@ if __name__ == '__main__':
 
             #FOR EVERY DIMENSION DECLARATION:
             dimensionMatches = pars_DIMENSION.finditer(fileString)
-            dimensionList = [] #[[start,length], ...]
             for matchNum , match in enumerate(dimensionMatches):
-                #append the begining and length of the dimension declaration
-                dimensionList.append([match.start(0),match.end(1) - match.start(0)])
+                #Save the idx of where comments need to be inserted
+                idxToComment = []
+                #Add start of line of DIMENSION
+                idxToComment.append(match.group(0).rfind('\n') + 1)
+
+                #In the declared Dimensions find all new lines and add the next index to the list. Exclude last '\n' from the string
+                for idx,letter in enumerate(match.group(1)[:-1]):
+                    if(letter == '\n'):
+                        idxToComment.append(match.start(1) + idx + 1)
                 #get variabels inside DIMENSION declaration string
                 variablesMatch = pars_Vars.findall(match.group(1))
                 #Parse found variablse to remove any whitespace
@@ -173,9 +182,12 @@ if __name__ == '__main__':
                 for var in variablesMatch:
                     #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
                     template.addVariable(var)
+            ###################################
             #DELETE DIMENSION DECLARATIONS HERE
+            #####################################
+            #TODO: Change Deletion to storing where to put comments
             accumulator = 0
-            for statement in dimensionList:
+            for statement in dimensionCommentIdx:
                 fileString = insertInString(fileString, statement[0] - accumulator, statement[0] + statement[1] - accumulator, "")
                 accumulator += statement[1]
             with open(filepath, 'w') as file:
@@ -255,12 +267,15 @@ if __name__ == '__main__':
             line = line.decode("utf-8")
             print(line)
             #IDEA :: Add 'and IMPLICIT type' to more thoroughly check erro message
-            if("‘" in line and "’" in line):
+            if("‘" in line and "’" in line and "IMPLICIT type" in line):
                 variableName = line[line.index("‘")+1 : line.index("’")]
                 detectedVariables.append(variableName)
         print(f"Detected undeclared functions:\n {detectedVariables}\n")
         for variable in detectedVariables:
             template.addVariable(variable)
+        ################################################################
+        #Write type template to file with IMPLICIT NONE
+        #############################################################
         with open(filepath,'w') as file:
             print(f"Writing declared type functions to: {filepath}")
             writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
