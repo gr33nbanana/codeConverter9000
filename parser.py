@@ -40,11 +40,14 @@ args = docopt(__doc__, version = '1.0')
 #dimensionPattern = r"DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))"
 ##Assuming that there is only one DIMENSION declaration
 pars_DIMENSION = re.compile(r"^(?!.*?\!)\s*?DIMENSION(?=((.*\&\s*\n\s*\&)*.*\n?))(?!.+(\s+\:))",flags = re.IGNORECASE | re.MULTILINE)
+#pars_DIMENSION:
+#   Group1 : All variables after DIMENSION declaration including last continued line
+# Group2 : All variables after Dimension Declaration up to the last '&' symbol (at begining of last line)
+
 #Detect variabels from Dimension string: anything name(dim1,...,dimN)
 pars_Vars = re.compile(r"[\w\s]*\(.*?\)+")
 #Detect IMPLICIT DOUBLE PRECISION declaration
 pars_implicit_Double_declaration = re.compile(r"^(?!.*?\!).*(IMPLICIT.*DOUBLE.*PRECISION.*\n)", flags = re.IGNORECASE | re.MULTILINE)
-#TODO :: create parser for 'undeclared type' of a variable for stderr/stdout
 
 #######Special character for undeclared variable type: ‘ and ’
 
@@ -125,7 +128,9 @@ if __name__ == '__main__':
             print(f"\nOpening to read: {filepath}")
             fileString = file.read()
         print(f"Closed {filepath}")
+        ##########################################
         #FIND IMPLICIT DOUBLE PRECISION STATEMENT
+        ##########################################
         implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
         if(type(implicitDeclaration) == type(None)):
             #If no IMPLICIT DOUBLE DECLARATION, skip file
@@ -180,6 +185,7 @@ if __name__ == '__main__':
             #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
             pass
 
+        #TODO : Comment out found dimensions to add only a fully comented out template
         with open(filepath,'w') as file:
             #Dimensions are uncommented, old dimension declaration is deleted
             ## --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
@@ -200,10 +206,17 @@ if __name__ == '__main__':
         print(hephaestusString)
 
         sp.call(hephaestusString, shell = True)
-        #TODO :: actually make terminalargs be set from docopt
+        ###########################################
+        #STAGE ANY ASM DIFFERENCES FROM COMMENTS
+        ###########################################
         terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
+        #######################################################
         #Switch to Implicit none to gather undeclared variabels
+        #######################################################
+
+        #TODO : Comment out Old dimension declaraions
+
         template.switchImplicitStatement()
         with open(filepath,'w') as file:
             print(f"\nSwitching to Implicit none: {filepath}")
@@ -211,7 +224,7 @@ if __name__ == '__main__':
             file.write(writeString)
         print(f"Closed {filepath}\n")
 
-        #TODO::run compilation and parse error message
+
         print("\nCompiling with IMPLICIT NONE statement to get undeclared variables\n")
         detectedVariables = []
         compileArgs = getMakeCommand()
@@ -231,7 +244,9 @@ if __name__ == '__main__':
             file.write(writeString)
         print(f"Closed {filepath}")
         #print("Compiling program after Type Declaration and saving overwriting assembly code:")
+        ###########################################################
         #Compile to check for undeclared functions
+        ###########################################################
         print("\nCompiling with IMPLICIT NONE statement to get undeclared functions\n")
         detectedVariables = []
         compileArgs = getMakeCommand()
@@ -253,7 +268,9 @@ if __name__ == '__main__':
         print(f"Closed {filepath}")
         print("Compiling program after Type Declaration and saving overwriting assembly code:")
         #sp.call(compileArgs, shell = True)
-
+        ################################################################
+        #Overwrite ASM code and wait for input to continue
+        ###############################################################
         sp.call(hephaestusString, shell = True)
         print('\a')
         input(f"Check {filepath} to see how well the script did")
