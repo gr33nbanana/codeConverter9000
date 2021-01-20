@@ -31,7 +31,7 @@ import re
 import TypeTemplate as tmp
 import subprocess as sp
 from pathlib import Path
-args = docopt(__doc__, version = '1.0')
+args = docopt(__doc__, version = '2.0')
 # <parse> [--only --recursive:default --control_version_comand:git add -A && git commit default]
 
 #Can replace DIMENSION with any keyword
