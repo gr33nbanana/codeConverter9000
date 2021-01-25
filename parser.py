@@ -205,10 +205,10 @@ if __name__ == '__main__':
         ###########################################
         #STAGE ANY ASM DIFFERENCES FROM COMMENTS
         ###########################################
-        input("Check how well script added commented template: Press any key to continue")
+        #DEBUGING: wait for user to check
+        #input("Check how well script added commented template: Press any key to continue")
         terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
-        #DEBUGING: wait for user to check
 
         #######################################################
         #Switch to Implicit none to gather undeclared variabels
