@@ -215,7 +215,7 @@ if __name__ == '__main__':
         #######################################################
         #Uncomment Dimension declarations
         template.commentToggleTemplate()
-        #change filestring and write to file
+        #comment old dimension declarations in filestring and write to file
         if(len(dimensionCommentIdx) > 0):
             comment_accumulator = 0
             for commentidx in dimensionCommentIdx:
