@@ -84,6 +84,7 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
         #paths = glob("full/path/filename(.f)<-dot in fromType string")
         paths = glob(globArgument, recursive = args['--recursive'])
     try:
+        #Ignore files from .gitignore
         with open(".gitignore",'r') as file:
             print("Reading gitignore file")
             ignoreInfo = file.readlines()
