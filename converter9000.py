@@ -90,13 +90,14 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
         #args['--only'][0] is the string "file1.txt,file2.cpp..."
         #parses the string to a list of file names
         files = args['--only'][0].split(',')
-        #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
         paths = [location + name for name in files]
-        #print("PATHS:\n" + str(paths))
+        #paths = ["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
+        #print("DEBUGGING: COLLECTED PATHS:\n" + str(paths))
     elif(len(args['--only']) == 0):
         #paths = glob("full/path/filename(.f)<-dot in fromType string")
         paths = glob(globArgument, recursive = args['--recursive'])
     try:
+        #Read the gitignore file to remove all paths and files which git ignores.
         with open(".gitignore",'r') as file:
             print("Reading gitignore file")
             ignoreInfo = file.readlines()
@@ -106,11 +107,14 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
         for idx, line in enumerate(ignoreInfo):
             ignoreInfo[idx] = line.replace("\n", "*")
             ignoreInfo[idx] = './' + ignoreInfo[idx]
+            #paths need './' for root, and * at end to ignore anything starting with the specified characters
+            # './_*' -- for ./_build etc
+            # './*.o*' for any ./path/file.F90.o* file
         print(f"IgnoreInfo: {ignoreInfo}")
         #print(f"paths pre filter: {type(paths)} \n{paths}")
 
+        #Remove all matching gitignore paths from the return path list
         paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
-
         holder = []
         for path in paths:
             holder.append(path)
@@ -126,6 +130,10 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
     return paths
 
 def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
+    """Runs findent on collected paths from collectPaths(),
+    if sisyphus -- overwrites .f files with free format
+    if remove   -- removes all paths from collectPaths(), intended for removing helper files '_.F90'
+    """
     #location = './' by default, something like 'D:/Uni/' if specified
     #<fromtype> = '.f' '.F90' contains a dot
     #<totype>   = '.f' '.F90' contains a dot
@@ -133,7 +141,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 
     for basePathAndName in outputlines:
         #basePathAndName contains   'fullpath/filename.f'            | fullpath/filename{fromType}
-        #outPutPathAndName contains 'fullopath/filename_.F90 or .F90 | fullpath/filename{toType}
+        #outputPathAndName contains 'fullopath/filename_.F90 or .F90 | fullpath/filename{toType}
         outputPathAndName = basePathAndName[: - len(fromType)]
         outputPathAndName = outputPathAndName.__add__(toType)
         #Extra formatting for Windows
@@ -147,6 +155,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         except:
             print("Error while trying to run findent\nFiles might not be in the current or specified path")
         if(sisyph):
+            #Overwrite the fixed format code in basePathAndName with the free format code in outputPathAndName
             catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = basePathAndName)
             print(catArgument)
             shutil.copy2(outputPathAndName, basePathAndName)
@@ -170,16 +179,22 @@ def runMakeCleanBuilt():
             #sp.call("make", shell = True)
             compileFiles()
     except:
-        print("Are you sure make file is in this directory? Run from _build directory")
+        print("Are you sure make file is in this directory? Run from base directory.")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
+    #Returns a list of the commands it ran, return object is later printed
     fileName = givenName
 
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     returnArg1 = ''
     returnArg2 = ''
+    #############################################################
+    #Following two ifs statements control saving BOTH strings and assembly if nothing is specified, and only strings or only assembly information if one of them is specified.
     if(not args['--onlyStrings'] or args['--onlyAssembly']):
+        #########
+        #Runs by default, if --onlyStrings is specified, doesnt' run, if --onlyAssembly is specified only this shellarg runs, no string data saved
+        #########
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         #argument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
         shellArgument = "objdump -d {objectName} > {outputPath}{name}{extension}.asm"
@@ -187,24 +202,21 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
         #print(shellArgument)
         #printList.append(shellArgument)\
         #
-        #!!!!!!
-        #Runs by default, if --onlyStrings is specified, doesnt' run, if --onlyAssembly is specified only this shellarg runs, no string data saved
-        #!!!!!!
         sp.call(shellArgument, shell = True)
         returnArg1 = shellArgument
 
     if(not args['--onlyAssembly'] or args['--onlyStrings']):
+        ########
+        #Runs by default, if --onlyAssembly is specified it doesnt' run, if --onlyStrings is specified only this shellarg runs, no asm data saved
+        ########
+        #printList.append(shellArgument)
         #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
         shellArgument = "strings -d {objectName} > {outputPath}{name}{extension}.txt"
         shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType )
 
-        #printList.append(shellArgument)
-        #!!!!!!
-        #Runs by default, if --onlyAssembly is specified it doesnt' run, if --onlyStrings is specified only this shellarg runs, no string data saved
-        #!!!!!!
         sp.call(shellArgument, shell = True)
         returnArg2 = shellArgument
-
+    #############################################################
     #print(shellArgument)
     returnShellArgument = "{shellArgument1}, {shellArgument2}".format(shellArgument1 = returnArg1, shellArgument2 = returnArg2)
     return returnShellArgument
