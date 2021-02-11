@@ -33,68 +33,69 @@ import time
 #TODO :: add docopt documentation
 args = docopt(__doc__, version = '1.0')
 
-regex = r"^(?!\!)(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\d+))"
+regex = r"^(?!\!)(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\s*?\2))"
+# ------------------------//-----------------------(\2) \n n-th capturing group, (?:) non storing group
 def getMakeCommand():
-    """" Return a string of the relevant terminal command to compile the program, depending on if --withMake or --withCMake was specified"""
+	"""" Return a string of the relevant terminal command to compile the program, depending on if --withMake or --withCMake was specified"""
 
-    if(args['--withMake']):
-        return "make built"
-    elif(args['--withCMake']):
-        return "cd _build && make"
+	if(args['--withMake']):
+		return "make built"
+	elif(args['--withCMake']):
+		return "cd _build && make"
 
 def compileFiles():
-    """Calls the make or CMake command line for compiling the project.
-    """
-    if(args['--withMake']):
-        sp.call("make built", shell = True)
-    elif(args['--withCMake']):
-        sp.call("cd _build && make", shell= True)
+	"""Calls the make or CMake command line for compiling the project.
+	"""
+	if(args['--withMake']):
+		sp.call("make built", shell = True)
+	elif(args['--withCMake']):
+		sp.call("cd _build && make", shell= True)
 
 def collectPaths(location = args['--path'], fromType = args['<extension>']):
-    """Returns a list of all files in the specified --path with the specified extension <extension>
-    """
-    globArgument = location + '*%s'%fromType
-    if ( args['--recursive'] == True ):
-        globArgument = location + '**/*%s'%fromType
+	"""Returns a list of all files in the specified --path with the specified extension <extension>
+	"""
+	globArgument = location + '*%s'%fromType
+	if ( args['--recursive'] == True ):
+		globArgument = location + '**/*%s'%fromType
 
-    if(len(args['--only']) > 0):
-        #args['--only'][0] is the string "file1.txt,file2.cpp..."
-        #parses the string to a list of file names
-        files = args['--only'][0].split(',')
-        #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
-        paths = [location + name for name in files]
-        #print("PATHS:\n" + str(paths))
-    elif(len(args['--only']) == 0):
-        #paths = glob("full/path/filename(.f)<-dot in fromType string")
-        paths = glob(globArgument, recursive = args['--recursive'])
-    try:
-        with open(".gitignore",'r') as file:
-            print("Reading gitignore file")
-            ignoreInfo = file.readlines()
-            for line in ignoreInfo:
-                if(line[0] == '#'):
-                    ignoreInfo.remove(line)
-        for idx, line in enumerate(ignoreInfo):
-            ignoreInfo[idx] = line.replace("\n", "*")
-            ignoreInfo[idx] = './' + ignoreInfo[idx]
-        print(f"IgnoreInfo: {ignoreInfo}")
-        #print(f"paths pre filter: {type(paths)} \n{paths}")
+	if(len(args['--only']) > 0):
+		#args['--only'][0] is the string "file1.txt,file2.cpp..."
+		#parses the string to a list of file names
+		files = args['--only'][0].split(',')
+		#["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
+		paths = [location + name for name in files]
+		#print("PATHS:\n" + str(paths))
+	elif(len(args['--only']) == 0):
+		#paths = glob("full/path/filename(.f)<-dot in fromType string")
+		paths = glob(globArgument, recursive = args['--recursive'])
+	try:
+		with open(".gitignore",'r') as file:
+			print("Reading gitignore file")
+			ignoreInfo = file.readlines()
+			for line in ignoreInfo:
+				if(line[0] == '#'):
+					ignoreInfo.remove(line)
+		for idx, line in enumerate(ignoreInfo):
+			ignoreInfo[idx] = line.replace("\n", "*")
+			ignoreInfo[idx] = './' + ignoreInfo[idx]
+		print(f"IgnoreInfo: {ignoreInfo}")
+		#print(f"paths pre filter: {type(paths)} \n{paths}")
 
-        paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
+		paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
 
-        holder = []
-        for path in paths:
-            holder.append(path)
-        #print(f"Holder paths: {holder}")
-        paths = holder
-        #print(f"returned paths: {paths}")
-    except:
-        warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
-        if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
-            pass
-        else:
-            raise SystemExit
-    return paths
+		holder = []
+		for path in paths:
+			holder.append(path)
+		#print(f"Holder paths: {holder}")
+		paths = holder
+		#print(f"returned paths: {paths}")
+	except:
+		warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
+		if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
+			pass
+		else:
+			raise SystemExit
+	return paths
 
 
 #Main loop
@@ -129,15 +130,16 @@ if __name__ == '__main__':
 			#Group 3 -- exit Address of DO LOOP
 			indentation = " "*(match.end(1) - match.start(1))
 			#FIND WHERE THE GOTO LABEL IS
+			#TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
 			labelVal = match.group(2)
-			labelRegex = r"^" + labelVal
+			labelRegex = r"^" + labelVal + "\D"
 			restOfString = test_str[match.end(2) : ]
 			labelMatch = re.search(labelRegex, restOfString, re.IGNORECASE | re.MULTILINE)
 
-			labelStart = int(match.end(2)) + int(labelMatch.start())
-			labelEnd = int(match.end(2)) + int(labelMatch.end())
-			if(type(labelMatch) == type(None)):
-				warnings.warn(f"WARNING! Detected GOTO label {labelVal} could not be found with regex {labelRegex} after DO statement at {match.start(1)}")
+			labelStart = match.start(3) #int(match.end(2)) + int(labelMatch.start())
+			labelEnd = match.end(3)     #int(match.end(2)) + int(labelMatch.end())
+			if(type(match.group(3)) == type(None)):
+				warnings.warn(f"WARNING! Detected GOTO label {match.group(2)} could not be found with regex {regex} after DO statement at {match.start(1)}")
 				raise SystemExit
 
 			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
@@ -157,26 +159,29 @@ if __name__ == '__main__':
 
 			#Write comments to file
 			with open(filepath, 'w') as file:
-				print(f"Writing Comments to: {filepath}")
+				print(f"\033[1;35;42m Writing Comments to: {filepath} \033[0;37;40m")
 				file.write(commented_string)
 
 			#Compile and commit any assembly changes with message "changes from comments"
 			#compile and SAVE asm diff from comment lines
-	        #convert9000.py hephaestus --withCMake | --withMake
+			#convert9000.py hephaestus --withCMake | --withMake
 			p = Path(f"{filepath}")
 
 			#Get only filename for commits
 			commitName = Path(f"{filepath}").name
-	        #CMake has object files named filename.F90.o , need to pass that to converter9000
+			#CMake has object files named filename.F90.o , need to pass that to converter9000
 			fileName = p.name + ".o"
 			hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={fileName}"
-			print(hephaestusString)
-
 			#call sisyphus to compile asm
+			print(hephaestusString)
+			sp.call(hephaestusString, shell = True)
 			#Check if program compiles
-			proc = sp.Popen(hephaestusString, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+			makeStr = getMakeCommand()
+			print(makeStr)
+			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
 			flagWATCHDOG = False
-			for line in proc.stdout.readline():
+			#TODO:: Generalize -- run a command and watch for flags or compilation
+			for line in proc.stdout.readlines():
 				line = line.decode("utf-8")
 				print(line)
 				if('100%' in line and 'watchdog' in line):
@@ -187,14 +192,14 @@ if __name__ == '__main__':
 				print('\a')
 				raise SystemExit
 
-			#Call git add && git commit
-			gitCommentCommitArg = f"git add -A && git commit -m 'Commit comment changes in {commitName}'"
-			print(gitCommentCommitArg)
+			#Call git add to stage changes from comments
+			gitCommentCommitArg = f"git add -A"
+			print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
 			sp.call(gitCommentCommitArg, shell=True)
 			#Wait 5 seconds just in case, for gitKraken to register any asm code change
-			time.sleep(5)
+			#time.sleep(5)
 
-
+			#Write END DO statement in the file
 			flagEND_DO = 'END DO\n'
 			accumulator = 0
 			for idxPair in doidx:
@@ -212,50 +217,62 @@ if __name__ == '__main__':
 				accumulator += len(idxPair[0]) + len(flagEND_DO)
 			#print("TEST STRING AFTER ADDING END DO STATEMENT:")
 			#print(test_str)
-			#TODO::: CODE GETS CUT UP WRONG
+			#
 			with open(filepath, 'w') as file:
+				print(f"\033[1;35;47m Updating DO statement in: {filepath} \033[0;37;40m")
 				file.write(test_str)
 			#Save new assembly code after chaning DO LOOP
 			print(hephaestusString)
+			sp.call(hephaestusString, shell=True)
 			#Check if program compiles
-			proc = sp.Popen(hephaestusString, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
 			flagWATCHDOG = False
-			for line in proc.stdout.readline():
+			for line in proc.stdout.readlines():
 				line = line.decode("utf-8")
 				print(line)
 				if('100%' in line and 'watchdog' in line):
 					flagWATCHDOG = True
 
 			if(not flagWATCHDOG):
-				print("Program did not compile")
+				print("\033[1;37;41m Program did not compile \033[0;37;40m")
 				print('\a')
 				raise SystemExit
 
 			#Call GIT STATUS to check if there is assembly difference
+			#Check for .asm after "changes not staged for commit:"
 			gitStatusStr = "git status"
 			proc = sp.Popen(gitStatusStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
 			flagASM = False
+			gitNotStagedFlag = False
 			for line in proc.stdout.readlines():
 				line = line.decode("utf-8")
 				print(line)
-				if('modified:' in line and 'DumpedFiles' in line and '.asm' in line):
+				if('Changes not staged for commit' in line):
+					gitNotStagedFlag = True
+				if(gitNotStagedFlag and 'modified:' in line and 'DumpedFiles' in line and '.asm' in line):
 					flagASM = True
-			if(flagASM):
-				print("Detected assembly difference")
+			if(gitNotStagedFlag and flagASM):
+				print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
 				print('\a')
-				raise SystemExit
+				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+				break
 
 			#Git commit -- this is after DO loop has been changed
-			gitCommitArg = f"git add -A && git commit -m 'Change DO_LOOP in {commitName}'"
-			print(gitCommitArg)
+			#Dirty way to just get ike/subfolder/filename.F90 for example
+			dirtyFilePath = filepath[filepath.index("athlet-cd/") + len("athlet-cd/"):]
+			gitCommitArg = f"git reset && git add {dirtyFilePath}  && git commit -m 'Change DO_LOOP in {commitName}'"
+			print("\033[1;32;40m " + gitCommitArg + "\033[0;37;40m")
 			sp.call(gitCommitArg, shell = True)
 			#Wait 5 seconds just in case, for gitKraken to register any asm code change
 			time.sleep(5)
 			#####################################
 			# Check if there are SUB DO loops with labels
+			with open(filepath, 'r') as file:
+				test_str = file.read()
 			doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
 			if(type(doLoopExists) == type(None)):
-				input("No more DO LOOPS detected, press any key to go to next file")
-			else:
-				input("More DO LOOPs detected, press any key to continue.")
+				break
+			#	input("No more DO LOOPS detected, press any key to go to next file")
+			#else:
+			#	input("More DO LOOPs detected, press any key to continue.")
 		#print(f"Finished DO LOOP update in {filepath}")
