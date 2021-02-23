@@ -1,7 +1,7 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath> --withMake] [--only=<filename>... | --recursive]
+  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --identifier=<extension> --withMake] [--only=<filename>... | --recursive]
   converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera][--withMake | --withCMake] [--only=<filename>... | --recursive]
   converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --only=<filename>... --fromMake --onlyAssembly --onlyStrings]
 
@@ -26,7 +26,7 @@ Arguments:
 Options:
   -h --help                 Show this documentation.
 
-  --identifier=<extension>               Specify if the saved asm should have a indentifiying extension in thery name e.g.'file.extension.asm' [default: ]
+  --identifier=<extension>               Specify if the saved asm should have an indentifiying extension in their name e.g.'file.extension.asm'. [default: ]
 
   --version                 Show version.
 
@@ -37,8 +37,6 @@ Options:
   -o --only <name1,name2>   Only convert the given files or files seperated by comma.Include file extension.\n\t\t\t    -o file1.txt,file2.cpp,file3.f...
 
   --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
-
-  --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
 
   --clean                   Removes all temporary _.F90 files and the corresponding formated .f files and saves a single .F90 file [default: False]
 
@@ -170,7 +168,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
                 print("Error while deleting file: " + basePathAndName)
 
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
-
+#TODO :: Convert paths to absolute pahts after getting them in docopt
 def runMakeCleanBuilt():
     try:
         #If --withMake or --withCMake is specified do not call 'make built'
@@ -370,21 +368,31 @@ if __name__ == '__main__':
         #TODO:: Update workflow of convert command
         #Create Object files from old format types
         #IDEA: can just have it call itself with sisyphus command
-        runMakeCleanBuilt()
+        #runMakeCleanBuilt()
         #Gather the assembly code and string information
-        gatherDumpedOFiles( extension = args['<fromtype>'] )
-        filterForType()
+        #gatherDumpedOFiles( extension = args['<fromtype>'] )
+        #filterForType()
         #Re compile the program for new object files
-        runMakeCleanBuilt()
+        #runMakeCleanBuilt()
         #Gather new assembly code and strings
-        gatherDumpedOFiles( extension = args['<totype>'] )
+        #gatherDumpedOFiles( extension = args['<totype>'] )
         #run diff between the old and new assembly files
-        checkForDifference('.asm')
-        checkForDifference('.txt')
+        #checkForDifference('.asm')
+        #checkForDifference('.txt')
+        #######################################################
+        if not ( pathlib.Path(args['--dump_at']).exists() ):
+            print("No dumped assembly directory detected.\nWill compile program and save assembly code")
+            hephaestus()
+        #Only convert files and save them with the same name
+        filterForType(toType = '_.F90', remove = False)
+        renameAndClean()
+        hephaestus()
+
+
 
     elif(args['sisyphus'] and args['uphill']):
         #Save assembly code if it wasn't done
-        if not ( pathlib.Path(args['--dump_at']).exists() and args["--Hera"] ):
+        if not ( pathlib.Path(args['--dump_at']).exists() ):
             print("No dumped assembly directory detected.\nWill compile program and save assembly code")
             hephaestus()
 
@@ -392,7 +400,7 @@ if __name__ == '__main__':
         filterForType(toType = '_.F90', remove = False)
 
     elif(args['sisyphus'] and args['downhill']):
-        if not ( pathlib.Path(args['--dump_at']).exists() and args['--Hera'] ):
+        if not ( pathlib.Path(args['--dump_at']).exists() ):
             print("WARNING: No dumped assembly directory detected. Make sure it exists in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
             raise SystemExit
         #The files should be converted but kept with the same name
