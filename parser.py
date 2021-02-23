@@ -214,8 +214,6 @@ if __name__ == '__main__':
         #######################################################
         #Switch to Implicit none to gather undeclared variabels
         #######################################################
-        #Uncomment Dimension declarations
-        template.commentToggleTemplate()
         #comment old dimension declarations in filestring and write to file
         if(len(dimensionCommentIdx) > 0):
             comment_accumulator = 0
@@ -223,6 +221,9 @@ if __name__ == '__main__':
                 commentidx += comment_accumulator
                 fileString = insertInString(fileString,commentidx,commentidx,"!")
                 comment_accumulator += len("!")
+
+        #NOTE: Not needed to write and read, can just continue working with fileSTring
+        
         #Presumably now all DIMENSION lines are commented out
         with open(filepath, 'w') as file:
             file.write(fileString)
@@ -240,6 +241,9 @@ if __name__ == '__main__':
         implicitEndIdx = implicitDeclaration.end(1)
         #################################################
 
+        #Uncomment Dimension declarations
+        template.commentToggleTemplate()
+        #Switch comments on IMPLICIT DOUBLE and IMPLICIT NONE
         template.switchImplicitStatement()
         with open(filepath,'w') as file:
             print(f"\nSwitching to Implicit none: {filepath}")
