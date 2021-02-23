@@ -33,7 +33,7 @@ import time
 #TODO :: add docopt documentation
 args = docopt(__doc__, version = '1.0')
 
-regex = r"^(?!\!)(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\s*?\2))"
+regex = r"^(?!\!)(.*)?DO[ ]*?(?=\d+)(\d+)[\s\S]*?(?=\n(\s*?\2[\D]+?))"
 # ------------------------//-----------------------(\2) \n n-th capturing group, (?:) non storing group
 def getMakeCommand():
 	"""" Return a string of the relevant terminal command to compile the program, depending on if --withMake or --withCMake was specified"""
@@ -130,17 +130,19 @@ if __name__ == '__main__':
 			#Group 3 -- exit Address of DO LOOP
 			indentation = " "*(match.end(1) - match.start(1))
 			#FIND WHERE THE GOTO LABEL IS
-			#TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
-			labelVal = match.group(2)
-			labelRegex = r"^" + labelVal + "\D"
-			restOfString = test_str[match.end(2) : ]
-			labelMatch = re.search(labelRegex, restOfString, re.IGNORECASE | re.MULTILINE)
+			###TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
+			#labelVal = match.group(2)
+			#labelRegex = r"^" + labelVal + "\D"
+			#restOfString = test_str[match.end(2) : ]
+			#labelMatch = re.search(labelRegex, restOfString, re.IGNORECASE | re.MULTILINE)
 
 			labelStart = match.start(3) #int(match.end(2)) + int(labelMatch.start())
 			labelEnd = match.end(3)     #int(match.end(2)) + int(labelMatch.end())
 			if(type(match.group(3)) == type(None)):
 				warnings.warn(f"WARNING! Detected GOTO label {match.group(2)} could not be found with regex {regex} after DO statement at {match.start(1)}")
-				raise SystemExit
+				print('\a')
+				input(f"Remove staged and unstaged changes from {filepath}. Press any key to continue to next file")
+				break
 
 			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
 
@@ -190,7 +192,8 @@ if __name__ == '__main__':
 			if(not flagWATCHDOG):
 				print("Program did not compile")
 				print('\a')
-				raise SystemExit
+				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+				break
 
 			#Call git add to stage changes from comments
 			gitCommentCommitArg = f"git add -A"
@@ -236,7 +239,8 @@ if __name__ == '__main__':
 			if(not flagWATCHDOG):
 				print("\033[1;37;41m Program did not compile \033[0;37;40m")
 				print('\a')
-				raise SystemExit
+				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+				break
 
 			#Call GIT STATUS to check if there is assembly difference
 			#Check for .asm after "changes not staged for commit:"
