@@ -110,6 +110,7 @@ class TypeTemplate:
         for line in declarationLines:
             declarationString += line + "\n"
         return declarationString
+        # One line 109-112 : return "\n".join(declarationLines) + "\n"
 
     def printTemplate(self):
         """Prints the lines for type declaration. """
