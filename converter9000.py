@@ -68,7 +68,7 @@ import warnings
 
 args = docopt(__doc__, version = '3.0')
 #location = './' by default, something like 'D:/Uni/' if specified
-
+#TODO :: Move Compile Files to a utilities module
 def compileFiles():
     """Calls the make or CMake command line for compiling the project.
     """
@@ -76,14 +76,13 @@ def compileFiles():
         sp.call("make built", shell = True)
     elif(args['--withCMake']):
         sp.call("cd _build && make", shell= True)
-
+#TODO :: Move collectPaths to a utilities module
 def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
     """Returns a list of all files in the specified --path with the specified extension <fromtype>
     """
-    globArgument = location + '*%s'%fromType
+    globArgument = location + f"*{fromType}"        #'*%s'%fromType
     if ( args['--recursive'] == True ):
-        globArgument = location + '**/*%s'%fromType
-
+        globArgument = location + f"**/*{fromType}"#'**/*%s'%fromType
     if(len(args['--only']) > 0):
         #args['--only'][0] is the string "file1.txt,file2.cpp..."
         #parses the string to a list of file names
@@ -110,9 +109,9 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
             # './*.o*' for any ./path/file.F90.o* file
         print(f"IgnoreInfo: {ignoreInfo}")
         #print(f"paths pre filter: {type(paths)} \n{paths}")
-
         #Remove all matching gitignore paths from the return path list
         paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
+        #TODO :: why do I need to append the contets of path to a hodler and reassign?
         holder = []
         for path in paths:
             holder.append(path)
