@@ -10,3 +10,4 @@
          etc ...
 
 4-- Have a dummy .f fortran file to "experiment" on with the script or use as a showcase what the script does. (Free formatting, type declaration, changing DO loops and if statements)
+5-- implement more specific try catch exceptions which raise errors or exceptions provided from Python
