@@ -180,6 +180,7 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     outputFolder: str, path where to save the assembly files
     fileType:     str, add an additional extension to the filename, controlled by --extension option
     Runs parallel on individual path name of object files, gathering the assembly code and string data.
+    Returns a string of the commands it ran.
     """
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
     #Returns a list of the commands it ran, return object is later printed
@@ -188,24 +189,29 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     returnArg1 = ''
     returnArg2 = ''
     #############################################################
-    #Following two ifs statements control saving BOTH strings and assembly if nothing is specified, and only strings or only assembly information if one of them is specified.
+    #Following two IF statements do the following:
+    # IF nothing is specified:                  Save .asm and .txt information
+    # IF BOTH --onlyStrings and --onlyAssembly: Save .asm and .txt information
+    # IF ONLY --onlyStrings is specified:       Save just the .txt information
+    # IF ONLY --onlyAssembly is specified:      Save just the .asm information
     if(not args['--onlyStrings'] or args['--onlyAssembly']):
-        #########
-        #Runs by default, if --onlyStrings is specified, doesnt' run, if --onlyAssembly is specified only this shellarg runs, no string data saved
-        #########
+        # Saves the assembly code
+        #Runs by default.
+        #If --onlyStrings is specified doesnt' run
+        #If --onlyAssembly is specified only this shellarg runs, no string data saved
+        ###########
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         #argument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
         shellArgument = "objdump -d {objectName} > {outputPath}{name}{extension}.asm"
         shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType)
-        #print(shellArgument)
-        #printList.append(shellArgument)\
-        #
         sp.call(shellArgument, shell = True)
         returnArg1 = shellArgument
 
     if(not args['--onlyAssembly'] or args['--onlyStrings']):
-        ########
-        #Runs by default, if --onlyAssembly is specified it doesnt' run, if --onlyStrings is specified only this shellarg runs, no asm data saved
+        # Saves the string information from the object file.
+        #Runs by default.
+        #If --onlyAssembly is specified it doesnt' run
+        #If --onlyStrings is specified only this shellarg runs, no asm data saved
         ########
         #printList.append(shellArgument)
         #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
@@ -221,7 +227,7 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
 
 calledCommands = []
 #mostly a filler function to pass to map_async and get all the shell arguments that are returned
-def testCallBack(resultObject):
+def printCallBack(resultObject):
     """resultObject: result given back by the parallel function.
     appends resultObject to a global caledCommands list, to print after all function calls have been made
     """
@@ -266,26 +272,19 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     else:
         #pathList has to be made here so that it contains strings and not PosixPaths
         for filePath in pathlib.Path('.').glob('**/*.o'):
-            #strPath = str(filePath)
             pathList.append(strPath)
     #Function can be passed to mulitple threads for parralel processing
     #chunkSize can be specified, not much performance increase
     #chunkSize = int(len(pathList) / mp.cpu_count() )
     pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
     func = partial(runOnFiles, fileType = extension )
-    #try:
-    #print(f"Gathering ASM from : {pathList}")
-    pool.map_async(func, pathList, callback = testCallBack)
-    ##
-    #finally:
+    pool.map_async(func, pathList, callback = printCallBack)
     pool.close()
     pool.join()
     ##
     print(calledCommands)
     print(len(calledCommands))
-    #runOnFiles(pathList)
     endTime = time.time()
-    #print(printList)
     print("Runtime: {duration} seconds".format(duration = (endTime - startTime)) )
 
 def checkForDifference( givenType ):
@@ -352,7 +351,7 @@ def renameAndClean():
         if(maxCount <= 0):
             maxCount = 30
             #GitKraken cannot process more than 60-120 files at a time, before the changes stop being recognized as rename and become delte + create, loosing the commit history
-            input("Renaming paused. Check if Version control can handle the amount of renamed files.\nPress any key to continue")
+            input("Renaming paused. Check if Version control can handle the amount of renamed files. This is done to ensure the history of the changed files is kept.\nPress any key to continue")
         maxCount -= 1
         #print("PATHS: " + str(paths))
         #pathName   = path/filename_.F90
