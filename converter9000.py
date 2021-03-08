@@ -68,7 +68,6 @@ import warnings
 
 args = docopt(__doc__, version = '3.0')
 #location = './' by default, something like 'D:/Uni/' if specified
-#TODO :: Move Compile Files to a utilities module
 def compileFiles():
     """Calls the make or CMake command line for compiling the project.
     """
@@ -76,7 +75,6 @@ def compileFiles():
         sp.call("make built", shell = True)
     elif(args['--withCMake']):
         sp.call("cd _build && make", shell= True)
-#TODO :: Move collectPaths to a utilities module
 def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
     """Returns a list of all files in the specified --path with the specified extension <fromtype>
     """
@@ -111,7 +109,7 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
         #paths have been collected
         #Remove all matching gitignore paths from the return path list
         paths = [n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo)]
-        
+
 
     except:
         warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
@@ -174,7 +172,7 @@ def runMakeCleanBuilt():
             #sp.call("make", shell = True)
             compileFiles()
     except:
-        print("Are you sure make file is in this directory? Run from base directory.")
+        print("No option given for compilation. Add --withMake or --withCMake when calling the script.")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     """
@@ -235,24 +233,23 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     """
     extension:    string
     outputFolder: string
-    Gathers the assembly and string data from object files. If extension is specified, inserts the givien string in the name of the output assembly file: fileName.extension.asm
+    Gathers the assembly and string data from object files. If extension is specified, inserts the given string in the name of the output assembly file: 'fileName.extension.asm'
     """
     startTime = time.time()
     #extension is only information about the source of the object files and just gets added to the saved file name
     if(args['sisyphus']):
         extension = ''
-    try:
+    if not ( pathlib.Path(args['--dump_at']).exists() ):
+        #If there is no folder specified for dumping the assembly code, make one.
         os.mkdir(outputFolder)
-    except:
-        pass
+    #Run in parallel the following:
     #objdump -d ./folders/file.o > file.o.asm
     #collects .o files recursively
-    #Collect print statements here to not run print() all the time
-    #printList = []
+    #Collect print statements in global list to not run print() all the time
     print("Gathering Assembly code and Strings")
     pathList = []
     #Makefile provides object file names seperated by space
-    # whereas the docs tell users to seperate by comma
+    # whereas docopt seperates by comma
     if( len(args['--only']) > 0 and args['--fromMake']):
         changedOFiles = args['--only'][0].split(' ')
         print(" FILES ASSIGNED TO pathList: ", changedOFiles)
@@ -291,6 +288,9 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     print("Runtime: {duration} seconds".format(duration = (endTime - startTime)) )
 
 def checkForDifference( givenType ):
+    """OUTDATED! UNUSED!
+    Checks if there are differences in /DumpedFiles for the givenType ('asm' or 'txt') between the <fromtype> and <totype> passed to the script.
+    """
     #Checks for difference in the asembly and string output of a set of object files
     #Object files before running findent contain <fromType> in their name
     #Object files after running findent contain <toType> in their name
@@ -375,22 +375,6 @@ def renameAndClean():
 
 if __name__ == '__main__':
     if(args['convert']):
-        ######################################################
-        #Initial way to check for differences. Save the assembly and string code in differently named files and check create a difference file if there was a detected difference between the files.
-        #Create Object files from old format types
-        #IDEA: can just have it call itself with sisyphus command
-        #runMakeCleanBuilt()
-        #Gather the assembly code and string information
-        #gatherDumpedOFiles( extension = args['<fromtype>'] )
-        #filterForType()
-        #Re compile the program for new object files
-        #runMakeCleanBuilt()
-        #Gather new assembly code and strings
-        #gatherDumpedOFiles( extension = args['<totype>'] )
-        #run diff between the old and new assembly files
-        #checkForDifference('.asm')
-        #checkForDifference('.txt')
-        #######################################################
         if not ( pathlib.Path(args['--dump_at']).exists() ):
             print("No dumped assembly directory detected.\nWill compile program and save assembly code")
             hephaestus()
