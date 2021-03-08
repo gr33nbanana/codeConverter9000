@@ -119,6 +119,9 @@ if __name__ == '__main__':
 			with open(filepath, 'r') as file:
 				test_str = file.read()
 			#test_str is the file_string
+            #TODO :: encapsulate in a function the creation of doidx
+            #doidx = getRegexIndecies(string, regex)
+            # ---> return a list with all the matching regex ?
 			match = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
 			doidx = []
 
@@ -130,7 +133,7 @@ if __name__ == '__main__':
 			#Group 3 -- exit Address of DO LOOP
 			indentation = " "*(match.end(1) - match.start(1))
 			#FIND WHERE THE GOTO LABEL IS
-			###TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
+			###--?TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
 			#labelVal = match.group(2)
 			#labelRegex = r"^" + labelVal + "\D"
 			#restOfString = test_str[match.end(2) : ]
@@ -147,9 +150,15 @@ if __name__ == '__main__':
 			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
 
 			#Add END DO line as a comment (don't Change anything else)
+            #TODO :: can make adding a string to the text with an acumulator into a function:
+            #        nameOfFunction(" END DO " or other string, list_of_positions)
 			commented_string = test_str
 			comment_accumulator = 0
 			commentFlagEND_DO = "!END DO\n"
+            #TODO :: make into a function: for idxPair in doidx:
+            #       writeDostatement / writeStatement("DO" / function?, doidx)
+            #      -- could be used in other scripts like adding type template, arithmetic IF
+
 			for idxPair in doidx:
 				#idxPair has indentation and index of first label at DO statement end second label where do GOES TO
 				#idxPair = [" indentaion", [indexSTART,indexEND], [indexSTART, indexEND]]
@@ -178,6 +187,9 @@ if __name__ == '__main__':
 			print(hephaestusString)
 			sp.call(hephaestusString, shell = True)
 			#Check if program compiles
+            #TODO :: Encapsulate in a function: compiling the program and checking the assembly difference
+            #  checkForASMDiff() -- compiles with hephaestus, runs git status etc
+
 			makeStr = getMakeCommand()
 			print(makeStr)
 			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
