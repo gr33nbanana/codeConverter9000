@@ -108,16 +108,11 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
             # './_*' -- for ./_build etc
             # './*.o*' for any ./path/file.F90.o* file
         print(f"IgnoreInfo: {ignoreInfo}")
-        #print(f"paths pre filter: {type(paths)} \n{paths}")
+        #paths have been collected
         #Remove all matching gitignore paths from the return path list
-        paths = (n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo))
-        #TODO :: why do I need to append the contets of path to a hodler and reassign?
-        holder = []
-        for path in paths:
-            holder.append(path)
-        #print(f"Holder paths: {holder}")
-        paths = holder
-        #print(f"returned paths: {paths}")
+        paths = [n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo)]
+        
+
     except:
         warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
         if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
@@ -169,6 +164,9 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
 #TODO :: Convert paths to absolute pahts after getting them in docopt
 def runMakeCleanBuilt():
+    """
+    Runs the functions to compile the program if the optional flgas are given
+    """
     try:
         #If --withMake or --withCMake is specified do not call 'make built'
         if (args['--withMake'] or args['--withCMake']):
@@ -179,10 +177,15 @@ def runMakeCleanBuilt():
         print("Are you sure make file is in this directory? Run from base directory.")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
+    """
+    givenName:    str (pathName of object file)
+    outputFolder: str, path where to save the assembly files
+    fileType:     str, add an additional extension to the filename, controlled by --extension option
+    Runs parallel on individual path name of object files, gathering the assembly code and string data.
+    """
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
     #Returns a list of the commands it ran, return object is later printed
     fileName = givenName
-
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     returnArg1 = ''
     returnArg2 = ''
@@ -221,11 +224,19 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
 calledCommands = []
 #mostly a filler function to pass to map_async and get all the shell arguments that are returned
 def testCallBack(resultObject):
+    """resultObject: result given back by the parallel function.
+    appends resultObject to a global caledCommands list, to print after all function calls have been made
+    """
     global calledCommands
     calledCommands.append(resultObject)
     print("DONE")
 
 def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['--dump_at'] ):
+    """
+    extension:    string
+    outputFolder: string
+    Gathers the assembly and string data from object files. If extension is specified, inserts the givien string in the name of the output assembly file: fileName.extension.asm
+    """
     startTime = time.time()
     #extension is only information about the source of the object files and just gets added to the saved file name
     if(args['sisyphus']):
@@ -364,7 +375,8 @@ def renameAndClean():
 
 if __name__ == '__main__':
     if(args['convert']):
-        #TODO:: Update workflow of convert command
+        ######################################################
+        #Initial way to check for differences. Save the assembly and string code in differently named files and check create a difference file if there was a detected difference between the files.
         #Create Object files from old format types
         #IDEA: can just have it call itself with sisyphus command
         #runMakeCleanBuilt()
