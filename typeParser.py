@@ -156,6 +156,71 @@ def locateAndDeclareDimensions(filepath, filestring, template):
     ############################################
     return indeciesToComment
 
+def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, template):
+    """
+    filepath: str
+    filestring: str
+    dimensionCommentIdx: list
+    Adds a comment '!' at every index in the list 'dimensionCommentIdx' to the fileString.
+    Then switches the comments status and implicit statement in template
+    """
+    #comment old dimension declarations in filestring and write to file
+    if(len(dimensionCommentIdx) > 0):
+        comment_accumulator = 0
+        for commentidx in dimensionCommentIdx:
+            commentidx += comment_accumulator
+            fileString = insertInString(fileString, commentidx, commentidx,"!")
+            comment_accumulator += len("!")
+
+    #NOTE: Not needed to write and read, can just continue working with fileSTring
+
+    # Now all DIMENSION lines are commented out
+    with open(filepath, 'w') as file:
+        file.write(fileString)
+
+    ###################################################
+    # Re evaluate implicit declaration index just to be safe
+    with open(filepath, 'r') as file:
+        fileString = file.read()
+    #
+    implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
+    #get postiion of IMPLICIT DOUBLE PRECISION
+    #contained in the first matching group
+    implicitLineStartIdx = implicitDeclaration.start(0)
+    implicitStartIdx = implicitDeclaration.start(1)
+    implicitEndIdx = implicitDeclaration.end(1)
+    #################################################
+
+    #Uncomment Dimension declarations
+    template.commentToggleTemplate()
+    #Switch comments on IMPLICIT DOUBLE and IMPLICIT NONE
+    template.switchImplicitStatement()
+    with open(filepath,'w') as file:
+        print(f"\nSwitching to Implicit none: {filepath}")
+        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+        file.write(writeString)
+    print(f"Closed {filepath}\n")
+
+def compileForVariables(compileArgument, template, filepath, fileString, message):
+    print(message)
+    detectedVariables = []
+    proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+    for line in proc.stdout.readlines():
+        line = line.decode("utf-8")
+        print(line)
+        if("Error" in line and "‘" in line and "’" in line and "IMPLICIT type" in line):
+            variableName = line[line.index("‘")+1 : line.index("’")]
+            detectedVariables.append(variableName)
+    print(f"Detected undeclared variables or functions: {detectedVariables}")
+    for variable in detectedVariables:
+        template.addVariable(variable)
+    with open(filepath,'w') as file:
+        print(f"Writing declared type variables to: {filepath}")
+        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+        file.write(writeString)
+    print(f"Closed {filepath}")
+
+
 if __name__ == '__main__':
     filesToDeclare = collectPaths()
     for filepath in filesToDeclare:
@@ -219,29 +284,13 @@ if __name__ == '__main__':
         ###########################################
         #STAGE ANY ASM DIFFERENCES FROM COMMENTS
         ###########################################
-        #DEBUGING: wait for user to check
-        #input("Check how well script added commented template: Press any key to continue")
         terminalargs = "git add -A"
         sp.call(terminalargs, shell = True)
 
         #######################################################
         #Switch to Implicit none to gather undeclared variabels
         #######################################################
-        #comment old dimension declarations in filestring and write to file
-        if(len(dimensionCommentIdx) > 0):
-            comment_accumulator = 0
-            for commentidx in dimensionCommentIdx:
-                commentidx += comment_accumulator
-                fileString = insertInString(fileString,commentidx,commentidx,"!")
-                comment_accumulator += len("!")
-
-        #NOTE: Not needed to write and read, can just continue working with fileSTring
-
-        #Presumably now all DIMENSION lines are commented out
-        with open(filepath, 'w') as file:
-            file.write(fileString)
-
-        ###################################################
+        switchToImplicitNoneStatement(filepath, fileString, dimensionCommentIdx, template)
         # Re evaluate implicit declaration index
         with open(filepath, 'r') as file:
             fileString = file.read()
@@ -254,62 +303,14 @@ if __name__ == '__main__':
         implicitEndIdx = implicitDeclaration.end(1)
         #################################################
 
-        #Uncomment Dimension declarations
-        template.commentToggleTemplate()
-        #Switch comments on IMPLICIT DOUBLE and IMPLICIT NONE
-        template.switchImplicitStatement()
-        with open(filepath,'w') as file:
-            print(f"\nSwitching to Implicit none: {filepath}")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-            file.write(writeString)
-        print(f"Closed {filepath}\n")
 
-
-        print("\nCompiling with IMPLICIT NONE statement to get undeclared variables\n")
-        detectedVariables = []
-        compileArgs = getMakeCommand()
-        proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
-        for line in proc.stdout.readlines():
-            line = line.decode("utf-8")
-            print(line)
-            if("Error" in line and "‘" in line and "’" in line and "IMPLICIT type" in line):
-                variableName = line[line.index("‘")+1 : line.index("’")]
-                detectedVariables.append(variableName)
-        print(f"Detected undeclared varaibels:\n {detectedVariables}\n")
-        for variable in detectedVariables:
-            template.addVariable(variable)
-        with open(filepath,'w') as file:
-            print(f"Writing declared type variables to: {filepath}")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-            file.write(writeString)
-        print(f"Closed {filepath}")
-        #print("Compiling program after Type Declaration and saving overwriting assembly code:")
+        compileForVariables(compileArgument = getMakeCommand(), template, filepath, fileString, message = "Compiling with IMPLICIT NONE statement to get udneclared variables\n")
         ###########################################################
         #Compile to check for undeclared functions
         ###########################################################
-        print("\nCompiling with IMPLICIT NONE statement to get undeclared functions\n")
-        detectedVariables = []
-        compileArgs = getMakeCommand()
-        proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
-        for line in proc.stdout.readlines():
-            line = line.decode("utf-8")
-            print(line)
-            #IDEA :: Add 'and IMPLICIT type' to more thoroughly check erro message
-            if("‘" in line and "’" in line and "IMPLICIT type" in line):
-                variableName = line[line.index("‘")+1 : line.index("’")]
-                detectedVariables.append(variableName)
-        print(f"Detected undeclared functions:\n {detectedVariables}\n")
-        for variable in detectedVariables:
-            template.addVariable(variable)
-        ################################################################
-        #Write type template to file with IMPLICIT NONE
-        #############################################################
-        with open(filepath,'w') as file:
-            print(f"Writing declared type functions to: {filepath}")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-            file.write(writeString)
-        print(f"Closed {filepath}")
-        print("Compiling program after Type Declaration and saving overwriting assembly code:")
+        compileForVariables(compileArgument = getMakeCommand(), template, filepath, fileString, message = "\nCompiling with IMPLICIT NONE satement to get udneclared functions\n")
+
+        print("Compiling program after Type Declaration and overwriting assembly code:")
         ################################################################
         #Overwrite ASM code and wait for input to continue
         ###############################################################
