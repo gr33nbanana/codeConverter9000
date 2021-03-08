@@ -250,6 +250,7 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     pathList = []
     #Makefile provides object file names seperated by space
     # whereas docopt seperates by comma
+    # Handle which files toa add to pathlist:
     if( len(args['--only']) > 0 and args['--fromMake']):
         changedOFiles = args['--only'][0].split(' ')
         print(" FILES ASSIGNED TO pathList: ", changedOFiles)
@@ -265,7 +266,7 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     else:
         #pathList has to be made here so that it contains strings and not PosixPaths
         for filePath in pathlib.Path('.').glob('**/*.o'):
-            strPath = str(filePath)
+            #strPath = str(filePath)
             pathList.append(strPath)
     #Function can be passed to mulitple threads for parralel processing
     #chunkSize can be specified, not much performance increase
