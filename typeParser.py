@@ -1,7 +1,7 @@
-"""Parser.py
+"""typeParser.py
 
 Usage:
-  parser.py declare <extension> (--withMake | --withCMake) [--path=<location> --version_Control_Command=<vc_add>] [--recursive | --only=<filename>...]
+  typeParser.py declare <extension> (--withMake | --withCMake) [--path=<location> --version_Control_Command=<vc_add>] [--recursive | --only=<filename>...]
 
 Commands:
   declare         Glob for the specified extension files and declare variables for any file which uses implicit double precision
@@ -117,6 +117,45 @@ def insertInString(originalString, cutIndex1, cutIndex2, stringToInsert):
      """
     return originalString[:cutIndex1] + stringToInsert + originalString[cutIndex2:]
 
+def locateAndDeclareDimensions(filepath, filestring, template):
+    """
+    filepath: str
+    filestring: str
+    tempalte: TypeTemplate object
+
+    Parsers through the filestring to find all DIMENSION declarations. Adds the Dimension variables to the TypeTempalte object using its method.
+    Returns a list of all the indencies where a comment should be placed to comment out the old DIMENSION declarations, uncluding line continuations.
+    """
+    indeciesToComment = []
+    #FOR EVERY DIMENSION DECLARATION:
+    dimensionMatches = pars_DIMENSION.finditer(fileString)
+    for matchNum , match in enumerate(dimensionMatches):
+        #Save the idx of where comments need to be inserted
+        #Add start index at start of line of DIMENSION
+        dimString = fileString[:match.start(1)]
+        indeciesToComment.append( dimString.rfind('\n') + 1 )
+
+        #In the declared Dimensions find all new lines and add the next index to the list. Exclude last '\n' from the string
+        for idx,letter in enumerate(match.group(1)[:-1]):
+            if(letter == '\n'):
+                indeciesToComment.append(match.start(1) + idx + 1)
+        ##indeciesToComment now has all indecies to put a comment at
+        #get variabels inside DIMENSION declaration string
+        variablesMatch = pars_Vars.findall(match.group(1))
+        #Parse found variablse to remove any whitespace
+        for idx, var in enumerate(variablesMatch):
+            #Remove all meaningless empty lines to have varibale list be in the form:
+            #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
+            variablesMatch[idx] = var.replace(" ","")
+        for var in variablesMatch:
+            #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
+            template.addVariable(var)
+    ############################################
+    #Comment out DIMENSION Declaration in TEMPLATE
+    template.commentToggleTemplate()
+    ############################################
+    return indeciesToComment
+
 if __name__ == '__main__':
     filesToDeclare = collectPaths()
     for filepath in filesToDeclare:
@@ -148,52 +187,26 @@ if __name__ == '__main__':
         ##########################################
         dimensionLine = pars_DIMENSION.search(fileString)
         #IF a DIMENSION declaration is detected
-        dimensionCommentIdx = [] #[[idxToAddComment1, ... idxToAddCommentN], ... ,[ ==//==]]
         if(type(dimensionLine) != type(None)):
+            #If there are declared dimensions in the file.
             if(implicitLineStartIdx > dimensionLine.start(0)):
                 #Make sure DIMENSION declaration is after IMPLICIT declaration, its assumed later when writing to the file
                 warnings.warn("Warning, DIMENSION declaration detected before IMPLICIT declaration. Cannot proceed as script requires IMPLCIT declaration to be first when writing.")
                 raise SystemExit
 
-            #FOR EVERY DIMENSION DECLARATION:
-            dimensionMatches = pars_DIMENSION.finditer(fileString)
-            for matchNum , match in enumerate(dimensionMatches):
-                #Save the idx of where comments need to be inserted
-                #Add start index at start of line of DIMENSION
-                dimString = fileString[:match.start(1)]
-                dimensionCommentIdx.append( dimString.rfind('\n') + 1 )
-
-                #In the declared Dimensions find all new lines and add the next index to the list. Exclude last '\n' from the string
-                for idx,letter in enumerate(match.group(1)[:-1]):
-                    if(letter == '\n'):
-                        dimensionCommentIdx.append(match.start(1) + idx + 1)
-                ##dimensionCommentIdx now has all indecies to put a comment at
-                #get variabels inside DIMENSION declaration string
-                variablesMatch = pars_Vars.findall(match.group(1))
-                #Parse found variablse to remove any whitespace
-                for idx, var in enumerate(variablesMatch):
-                    #Remove all meaningless empty lines to have varibale list be in the form:
-                    #[NaMe(ImAX,ZtOpMAX), NAMe2(DiM1,Dim2)]
-                    variablesMatch[idx] = var.replace(" ","")
-                for var in variablesMatch:
-                    #add detected variables to the tempalte. The Template class handles converting to upper case and parsing different dimensions and keywords. Takes variables of the form Name(Dim1,Dim2...) or just Name
-                    template.addVariable(var)
-
-            ############################################
-            #Comment out DIMENSION Declaration in TEMPLATE
-            template.commentToggleTemplate()
-            ############################################
+            dimensionCommentIdx = locateAndDeclareDimensions(filepath, filestring, template) #[[idxToAddComment1, ... idxToAddCommentN], ... ,[ for each dimension declaration ==//==]]
         else:
             #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
             pass
 
         with open(filepath,'w') as file:
             #Dimensions are commented out, old dimension declaration is stil there
-            ## NOTE --> It doesn't compile if DIMENSION(X) is before PARAMATER X = ... is declared, also some files might have multiple Dimension declarations with just one variable.
+            ## TODO :: Handle having PARAMETER (NAME) after TYPE,DIMENSION(X,Y) :: NAME
             print(f"\nWriting commented out template to: {filepath}")
             writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
             file.write(writeString)
         print(f"Closed {filepath}\n")
+        #TODO :: encapsulate callilng hephaestus in a function
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
         p = Path(f"{filepath}")
@@ -223,7 +236,7 @@ if __name__ == '__main__':
                 comment_accumulator += len("!")
 
         #NOTE: Not needed to write and read, can just continue working with fileSTring
-        
+
         #Presumably now all DIMENSION lines are commented out
         with open(filepath, 'w') as file:
             file.write(fileString)
