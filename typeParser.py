@@ -214,11 +214,7 @@ def compileForVariables(compileArgument, template, filepath, fileString, message
     print(f"Detected undeclared variables or functions: {detectedVariables}")
     for variable in detectedVariables:
         template.addVariable(variable)
-    with open(filepath,'w') as file:
-        print(f"Writing declared type variables to: {filepath}")
-        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-        file.write(writeString)
-    print(f"Closed {filepath}")
+
 
 def readFileString(filepath, message):
     """
@@ -278,7 +274,6 @@ if __name__ == '__main__':
             pass
 
         writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-
         writeFileString(filepath, writeString, message = f"\nWriting commented out template to : {filepath}")
         #TODO :: encapsulate callilng hephaestus in a function
         #compile and SAVE asm diff from comment lines
@@ -297,7 +292,7 @@ if __name__ == '__main__':
         sp.call(terminalargs, shell = True)
 
         #######################################################
-        #Switch to Implicit none to gather undeclared variabels
+        #Switch to IMPLICIT NONE statement
         #######################################################
         switchToImplicitNoneStatement(filepath, fileString, dimensionCommentIdx, template)
         # Re evaluate implicit declaration index
@@ -309,14 +304,20 @@ if __name__ == '__main__':
         implicitLineStartIdx = implicitDeclaration.start(0)
         implicitStartIdx = implicitDeclaration.start(1)
         implicitEndIdx = implicitDeclaration.end(1)
+
         #################################################
-
-
+        # Compile to gather undeclared variable names
+        #################################################
         compileForVariables(compileArgument = getMakeCommand(), template, filepath, fileString, message = "Compiling with IMPLICIT NONE statement to get udneclared variables\n")
+
+        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+        writeFileString(filepath, writeString, message = f"Writing declared type variables to: {filepath}")
         ###########################################################
         #Compile to check for undeclared functions
         ###########################################################
         compileForVariables(compileArgument = getMakeCommand(), template, filepath, fileString, message = "\nCompiling with IMPLICIT NONE satement to get udneclared functions\n")
+        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+        writeFileString(filepath, writeString, message = f"Writing declared type functions to: {filepath}")
 
         print("Compiling program after Type Declaration and overwriting assembly code:")
         ################################################################
