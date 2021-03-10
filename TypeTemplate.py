@@ -28,6 +28,42 @@ class TypeTemplate:
             if(line[0]):
                 self.__commentToggle(idx)
 
+    def _commentOutIndex(self, idx):
+        """
+        Add a comment symbol '!' to the index line if there is not one
+        """
+        if( self.template[idx][1][0] != "!"):
+            self.template[idx][1] ="!" + self.template[idx][1]
+        else:
+            pass
+
+    def _uncommentIndex(self, idx):
+        """
+        Remove comment symbol '!' frp, index line if there is one
+        """
+        if( self.template[idx][1][0] == "!"):
+            self.template[idx][1] = self.template[idx][1][1:]
+        else:
+            pass
+
+    def commentAllTemplate(self):
+        """
+        Comment out all uncommented declerations with variables
+        """
+        for idx, line in enumerate(self.template):
+            if(line[0]):
+                #IF TRUE flag is set then there are variables
+                print(f"DEBUGING: idx = {idx}")
+                self._commentOutIndex(idx)
+
+    def uncommentAllTemplate(self):
+        """
+        Uncomment all commented out declarations with variables
+        """
+        for idx, line in enumerate(self.template):
+            if(line[0]):
+                self._uncommentIndex(idx)
+
     def switchImplicitStatement(self):
         self.__commentToggle(self.implicitDoubleIndex)
         self.__commentToggle(self.implicitNoneIndex)
@@ -165,11 +201,13 @@ class TypeTemplate:
             raise AssertionError(f"Array {arrayName} not found in template")
 
 #%%##############################################################
-#tst = TypeTemplate()
-#tst.template
+tst = TypeTemplate()
+tst.template
 #tst.recognizedVariables
-#tst.addVariable("IMAX(DIM1,DIM2)")
-#tst.commentToggleTemplate()
+tst.addVariable("IMAX2")
+tst.commentToggleTemplate()
+tst.commentAllTemplate()
+tst.uncommentAllTemplate()
 #tst.switchImplicitStatement()
 #tst.removeVariable("IMAX(DIM1,DIM2)")
 #print(tst.getTemplate())
