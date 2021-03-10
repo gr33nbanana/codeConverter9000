@@ -219,7 +219,8 @@ def locateAndDeclareDimensions(filestring, template, dimensionParser):
 
 def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, template, implicitDoubleParser):
     """
-    Changes the IMPLICIT declaration in the provided Fortran file.
+    Changes the IMPLICIT declaration in the provided Fortran file
+    to an IMPLICIT NONE.
     First the function comments out all DIMENSION declarations and
     overwrites the file. Then it switches the IMPLICIT declaration
     in the template and writes it in the file.
@@ -366,6 +367,7 @@ if __name__ == '__main__':
         template = tmp.TypeTemplate()
         #get postiion of IMPLICIT DOUBLE PRECISION
         #contained in the first matching group
+        #Used for inserting the template between these two indecies
         implicitLineStartIdx = implicitDeclaration.start(0)
         implicitStartIdx = implicitDeclaration.start(1)
         implicitEndIdx = implicitDeclaration.end(1)
@@ -397,7 +399,7 @@ if __name__ == '__main__':
         #############################
         writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
         writeFileString(filepath, writeString, message = f"\nWriting commented out template to : {filepath}")
-        #TODO :: encapsulate callilng hephaestus in a function
+        #IDEA :: encapsulate callilng hephaestus in a function
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
         p = Path(f"{filepath}")
@@ -410,8 +412,7 @@ if __name__ == '__main__':
         ###########################################
         #STAGE ANY ASM DIFFERENCES FROM COMMENTS
         ###########################################
-        terminalargs = "git add -A"
-        sp.call(terminalargs, shell = True)
+        sp.call("git add -A", shell = True)
 
         #######################################################
         #Switch to IMPLICIT NONE statement
