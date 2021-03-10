@@ -68,6 +68,23 @@ def compileFiles():
 
 def collectPaths(location = args['--path'], fromType = args['<extension>']):
     """Returns a list of all files in the specified --path with the specified extension <extension>
+
+    Parameters
+    ----------
+    location : str
+        Root of where collection of Paths starts.
+    fromType : str
+        File extension to look for and collect all paths ending with it.
+
+    Returns
+    -------
+    list
+        List of all found paths
+
+    Example
+    -------
+    collectPaths(fromType = '.F90')
+    collectPaths(location = './folder/', fromType = '.F90')
     """
     globArgument = location + '*%s'%fromType
     if ( args['--recursive'] == True ):
