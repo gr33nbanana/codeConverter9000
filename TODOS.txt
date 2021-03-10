@@ -1,6 +1,10 @@
  1-- package all the functions from converter9000 in a module like "myUtils.py" to be able to import and use in all the other parsers as well.
- 2-- Checkout an older commit of ATHLET_CD master to have old .f files to test every option from the docopt arguments
- 3-- For Type declaration, arithmetic IF updating and DO LOOP updates change the workflow of the scripts to be:
+ 3-- Change the workflow of the scripts to be more function oriented for:
+    DONE [-- Type declaration --]
+    [arithmetic IF updating]
+    [DO LOOP updates]
+
+  like:
       ....
       utils
       ....
@@ -9,5 +13,6 @@
          bigFunction2()
          etc ...
 
+2-- Checkout an older commit of ATHLET_CD master to have old .f files to test every option from the docopt arguments
 4-- Have a dummy .f fortran file to "experiment" on with the script or use as a showcase what the script does. (Free formatting, type declaration, changing DO loops and if statements)
 5-- implement more specific try catch exceptions which raise errors or exceptions provided from Python
