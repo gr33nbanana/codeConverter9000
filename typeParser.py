@@ -215,6 +215,19 @@ def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, tem
     writeFileString(filepath, writeString, message = f"\nSwitching to IMPLICIT NONE in: {filepath}")
 
 def compileForVariables(compileArgument, template, filepath, fileString, message):
+    """
+    Parameters:
+        compileArgument: str,
+            string of bash command line to execute the commands needed for compilation
+        template: TypeTemplate
+            the template class which stores and handles the undeclared variables
+        filepath: str
+            full path to the file
+        filestr: str
+            string of the contents of the file
+        message: str
+            Information message to print out to the terminal
+    """
     print(message)
     detectedVariables = []
     proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
