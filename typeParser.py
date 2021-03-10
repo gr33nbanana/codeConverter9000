@@ -231,6 +231,12 @@ def readFileString(filepath, message):
     print(f"Closed {filepath}")
     return redString
 
+def writeFileString(filepath, stringToWrite, message):
+    print(message)
+    with open(filepath, 'w') as file:
+        file.write(stringToWrite)
+    print(f"Closed{filepath}")
+
 if __name__ == '__main__':
     filesToDeclare = collectPaths()
     for filepath in filesToDeclare:
@@ -271,13 +277,9 @@ if __name__ == '__main__':
             #If There is no DIMENSION found but there is IMPLICIT DOUBLE, continue with the type declaration.
             pass
 
-        with open(filepath,'w') as file:
-            #Dimensions are commented out, old dimension declaration is stil there
-            ## TODO :: Handle having PARAMETER (NAME) after TYPE,DIMENSION(X,Y) :: NAME
-            print(f"\nWriting commented out template to: {filepath}")
-            writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-            file.write(writeString)
-        print(f"Closed {filepath}\n")
+        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+
+        writeFileString(filepath, writeString, message = f"\nWriting commented out template to : {filepath}")
         #TODO :: encapsulate callilng hephaestus in a function
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
