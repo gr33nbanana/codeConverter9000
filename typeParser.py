@@ -260,6 +260,7 @@ if __name__ == '__main__':
         #FIND DIMENSION DECLARATION
         ##########################################
         dimensionLine = pars_DIMENSION.search(fileString)
+        dimensionCommentIdx = []
         #IF a DIMENSION declaration is detected
         if(type(dimensionLine) != type(None)):
             #If there are declared dimensions in the file.
