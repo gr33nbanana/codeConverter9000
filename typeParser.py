@@ -192,13 +192,12 @@ def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, tem
     #NOTE: Not needed to write and read, can just continue working with fileSTring
 
     # Now all DIMENSION lines are commented out
-    with open(filepath, 'w') as file:
-        file.write(fileString)
-
+    writeFileString(filepath, filestring, message= f"\nCommenting out old DIMENSION declarations")
     ###################################################
     # Re evaluate implicit declaration index just to be safe
-    with open(filepath, 'r') as file:
-        fileString = file.read()
+    fileString = readFileString(filepath, message=f"Reading {filepath} after switching to IMPLICIT NONE")
+    #with open(filepath, 'r') as file:
+    #    fileString = file.read()
     #
     implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
     #get postiion of IMPLICIT DOUBLE PRECISION
@@ -212,11 +211,8 @@ def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, tem
     template.commentToggleTemplate()
     #Switch comments on IMPLICIT DOUBLE and IMPLICIT NONE
     template.switchImplicitStatement()
-    with open(filepath,'w') as file:
-        print(f"\nSwitching to Implicit none: {filepath}")
-        writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
-        file.write(writeString)
-    print(f"Closed {filepath}\n")
+    writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
+    writeFileString(filepath, writeString, message = f"\nSwitching to IMPLICIT NONE in: {filepath}")
 
 def compileForVariables(compileArgument, template, filepath, fileString, message):
     print(message)
