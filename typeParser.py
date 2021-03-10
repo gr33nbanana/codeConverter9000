@@ -220,14 +220,21 @@ def compileForVariables(compileArgument, template, filepath, fileString, message
         file.write(writeString)
     print(f"Closed {filepath}")
 
+def readFileString(filepath, message):
+    """
+    filepath: str, full path to file
+    Opens filepath with read only and returns the string from file.read()
+    """
+    print(message)
+    with open(filepath, 'r') as file:
+        redString = file.read()
+    print(f"Closed {filepath}")
+    return redString
 
 if __name__ == '__main__':
     filesToDeclare = collectPaths()
     for filepath in filesToDeclare:
-        with open(filepath,'r') as file:
-            print(f"\nOpening to read: {filepath}")
-            fileString = file.read()
-        print(f"Closed {filepath}")
+        fileString = readFileString(filepath, message = f"Opening to read {filepath}")
         ##########################################
         #FIND IMPLICIT DOUBLE PRECISION STATEMENT
         ##########################################
@@ -292,8 +299,7 @@ if __name__ == '__main__':
         #######################################################
         switchToImplicitNoneStatement(filepath, fileString, dimensionCommentIdx, template)
         # Re evaluate implicit declaration index
-        with open(filepath, 'r') as file:
-            fileString = file.read()
+        fileString = readFileString(filepath, message = f"Opening to read {filepath}")
         #
         implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
         #get postiion of IMPLICIT DOUBLE PRECISION
