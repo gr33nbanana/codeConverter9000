@@ -201,13 +201,13 @@ class TypeTemplate:
             raise AssertionError(f"Array {arrayName} not found in template")
 
 #%%##############################################################
-tst = TypeTemplate()
-tst.template
+#tst = TypeTemplate()
+#tst.template
 #tst.recognizedVariables
-tst.addVariable("IMAX2")
-tst.commentToggleTemplate()
-tst.commentAllTemplate()
-tst.uncommentAllTemplate()
+#tst.addVariable("IMAX2")
+#tst.commentToggleTemplate()
+#tst.commentAllTemplate()
+#tst.uncommentAllTemplate()
 #tst.switchImplicitStatement()
 #tst.removeVariable("IMAX(DIM1,DIM2)")
 #print(tst.getTemplate())
