@@ -104,10 +104,13 @@ if __name__ == '__main__':
 	for filepath in filesToDeclare:
 		#For every file:
 		#Get the file code:
+        #TODO :: get readFileString function here to assign test_str
+        ###### FUNCTION #######
 		with open(filepath, 'r') as file:
 			print(f"\nOpening to read:{filepath}")
 			test_str = file.read()
 		print(f"Closed {filepath}")
+        #############################
 		#IF NO DO LOOP DETECTED GO TO NEXT FILE
 		doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
 		if(type(doLoopExists) == type(None)):
@@ -116,8 +119,10 @@ if __name__ == '__main__':
 		#While there are labeled do loops
 		while(type(doLoopExists != type(None) )):
 			#Read latest file version
+            ##########FUNCTION############
 			with open(filepath, 'r') as file:
 				test_str = file.read()
+            ###############################
 			#test_str is the file_string
             #TODO :: encapsulate in a function the creation of doidx
             #doidx = getRegexIndecies(string, regex)
@@ -151,7 +156,8 @@ if __name__ == '__main__':
 
 			#Add END DO line as a comment (don't Change anything else)
             #TODO :: can make adding a string to the text with an acumulator into a function:
-            #        nameOfFunction(" END DO " or other string, list_of_positions)
+            #        insertStrAtIndecies(str, list_of_positions)
+            ############# FUNCTION ############################################
 			commented_string = test_str
 			comment_accumulator = 0
 			commentFlagEND_DO = "!END DO\n"
@@ -167,18 +173,22 @@ if __name__ == '__main__':
 				commented_string = commented_string[ : commentNewLineIdx] + commentFlagEND_DO + commented_string[commentNewLineIdx : ]
 
 				comment_accumulator += len(commentFlagEND_DO)
+            ###################### return new string #########################
+            ##################################################################
 
-			#Write comments to file
+            #Write comments to file
+            ########### FUNCTION ##################
 			with open(filepath, 'w') as file:
 				print(f"\033[1;35;42m Writing Comments to: {filepath} \033[0;37;40m")
 				file.write(commented_string)
-
+            #########################################
 			#Compile and commit any assembly changes with message "changes from comments"
 			#compile and SAVE asm diff from comment lines
 			#convert9000.py hephaestus --withCMake | --withMake
 			p = Path(f"{filepath}")
 
 			#Get only filename for commits
+            #CHANGE TO: commitName = p.name
 			commitName = Path(f"{filepath}").name
 			#CMake has object files named filename.F90.o , need to pass that to converter9000
 			fileName = p.name + ".o"
@@ -188,8 +198,12 @@ if __name__ == '__main__':
 			sp.call(hephaestusString, shell = True)
 			#Check if program compiles
             #TODO :: Encapsulate in a function: compiling the program and checking the assembly difference
-            #  checkForASMDiff() -- compiles with hephaestus, runs git status etc
-
+            #  finishedCompilation() -- compiles with hephaestus, runs git status etc
+            ############################## FUNCTION #######################
+            # Parameters:
+            #   makeStr
+            #
+            # Return True if all flags passed, else handle outside of function in order to use break
 			makeStr = getMakeCommand()
 			print(makeStr)
 			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
@@ -200,13 +214,20 @@ if __name__ == '__main__':
 				print(line)
 				if('100%' in line and 'watchdog' in line):
 					flagWATCHDOG = True
-
+            #Change to
+            # if(not finishedCompilation()):
 			if(not flagWATCHDOG):
+                # Move outside of function
 				print("Program did not compile")
 				print('\a')
 				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
 				break
+            ###################################################################
 
+            ###################### FUNCTION #################################
+            # Parameters:
+            #   gitCommentCommitArg
+            #
 			#Call git add to stage changes from comments
 			gitCommentCommitArg = f"git add -A"
 			print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
@@ -233,13 +254,17 @@ if __name__ == '__main__':
 			#print("TEST STRING AFTER ADDING END DO STATEMENT:")
 			#print(test_str)
 			#
+            ################ FUNCTION ########################
 			with open(filepath, 'w') as file:
 				print(f"\033[1;35;47m Updating DO statement in: {filepath} \033[0;37;40m")
 				file.write(test_str)
+            ###################################################
+
 			#Save new assembly code after chaning DO LOOP
 			print(hephaestusString)
 			sp.call(hephaestusString, shell=True)
 			#Check if program compiles
+            ############# finishedCompilation() ##########################
 			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
 			flagWATCHDOG = False
 			for line in proc.stdout.readlines():
@@ -247,7 +272,8 @@ if __name__ == '__main__':
 				print(line)
 				if('100%' in line and 'watchdog' in line):
 					flagWATCHDOG = True
-
+            ##############################################################
+            # change to: if(not finishedCompilation()):
 			if(not flagWATCHDOG):
 				print("\033[1;37;41m Program did not compile \033[0;37;40m")
 				print('\a')
@@ -256,6 +282,14 @@ if __name__ == '__main__':
 
 			#Call GIT STATUS to check if there is assembly difference
 			#Check for .asm after "changes not staged for commit:"
+
+            ###################### FUNCTION ########################
+            # detectUnstagedDifference(statusCommand, dumpFolderNamem, desiredExtension)
+            # Parameters:
+            #   statusCommand
+            #   dumpFolderName
+            #   desiredExtension
+            #
 			gitStatusStr = "git status"
 			proc = sp.Popen(gitStatusStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
 			flagASM = False
@@ -268,6 +302,9 @@ if __name__ == '__main__':
 				if(gitNotStagedFlag and 'modified:' in line and 'DumpedFiles' in line and '.asm' in line):
 					flagASM = True
 			if(gitNotStagedFlag and flagASM):
+                ################## return True in the function:
+            ########### put this outside of the function, its how the script
+            ########### handles after getting a value from the function.
 				print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
 				print('\a')
 				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
@@ -283,8 +320,11 @@ if __name__ == '__main__':
 			time.sleep(5)
 			#####################################
 			# Check if there are SUB DO loops with labels
+
+            ######################### Function ################
 			with open(filepath, 'r') as file:
 				test_str = file.read()
+            #####################################################
 			doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
 			if(type(doLoopExists) == type(None)):
 				break
