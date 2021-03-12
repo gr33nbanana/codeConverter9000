@@ -196,38 +196,16 @@ if __name__ == '__main__':
 			#call sisyphus to compile asm
 			print(hephaestusString)
 			sp.call(hephaestusString, shell = True)
+
 			#Check if program compiles
-            #TODO :: Encapsulate in a function: compiling the program and checking the assembly difference
             #  finishedCompilation() -- compiles with hephaestus, runs git status etc
-            ############################## FUNCTION #######################
-            # Parameters:
-            #   makeStr
-            #
-            # Return True if all flags passed, else handle outside of function in order to use break
-			makeStr = getMakeCommand()
-			print(makeStr)
-			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
-			flagWATCHDOG = False
-			#TODO:: Generalize -- run a command and watch for flags or compilation
-			for line in proc.stdout.readlines():
-				line = line.decode("utf-8")
-				print(line)
-				if('100%' in line and 'watchdog' in line):
-					flagWATCHDOG = True
-            #Change to
-            # if(not finishedCompilation()):
-			if(not flagWATCHDOG):
+			if(not compileAndCheck( getMakeCommand() )):
                 # Move outside of function
 				print("Program did not compile")
 				print('\a')
 				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
 				break
-            ###################################################################
 
-            ###################### FUNCTION #################################
-            # Parameters:
-            #   gitCommentCommitArg
-            #
 			#Call git add to stage changes from comments
 			gitCommentCommitArg = f"git add -A"
 			print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
@@ -245,7 +223,8 @@ if __name__ == '__main__':
 				#test_str = test_str[ : idxPair[2][0]] + " "*(idxPair[2][1] - idxPair[2][0]) + test_str[idxPair[2][1] : ]
 			#print("TEST STRING AFTER REMOVING DO ADDRESSES:")
 			#print(test_str)
-
+            ############ FUNCTION ###########
+            ## insertStrAtIndecies
 			for idxPair in doidx:
 				#Line after last Do statement
 				newLineIdx = accumulator + idxPair[2][1] + test_str[accumulator + idxPair[2][1]: ].find('\n') + 1
@@ -264,17 +243,7 @@ if __name__ == '__main__':
 			print(hephaestusString)
 			sp.call(hephaestusString, shell=True)
 			#Check if program compiles
-            ############# finishedCompilation() ##########################
-			proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
-			flagWATCHDOG = False
-			for line in proc.stdout.readlines():
-				line = line.decode("utf-8")
-				print(line)
-				if('100%' in line and 'watchdog' in line):
-					flagWATCHDOG = True
-            ##############################################################
-            # change to: if(not finishedCompilation()):
-			if(not flagWATCHDOG):
+			if(not compileAndCheck( getMakeCommand() )):
 				print("\033[1;37;41m Program did not compile \033[0;37;40m")
 				print('\a')
 				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
@@ -283,39 +252,15 @@ if __name__ == '__main__':
 			#Call GIT STATUS to check if there is assembly difference
 			#Check for .asm after "changes not staged for commit:"
 
-            ###################### FUNCTION ########################
-            # detectUnstagedDifference(statusCommand, dumpFolderNamem, desiredExtension)
-            # Parameters:
-            #   statusCommand
-            #   dumpFolderName
-            #   desiredExtension
-            #
-			gitStatusStr = "git status"
-			proc = sp.Popen(gitStatusStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
-			flagASM = False
-			gitNotStagedFlag = False
-			for line in proc.stdout.readlines():
-				line = line.decode("utf-8")
-				print(line)
-				if('Changes not staged for commit' in line):
-					gitNotStagedFlag = True
-				if(gitNotStagedFlag and 'modified:' in line and 'DumpedFiles' in line and '.asm' in line):
-					flagASM = True
-			if(gitNotStagedFlag and flagASM):
-                ################## return True in the function:
-            ########### put this outside of the function, its how the script
-            ########### handles after getting a value from the function.
+            if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
 				print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
 				print('\a')
 				input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
 				break
-
 			#Git commit -- this is after DO loop has been changed
 			#Dirty way to just get ike/subfolder/filename.F90 for example
 			dirtyFilePath = filepath[filepath.index("athlet-cd/") + len("athlet-cd/"):]
-			gitCommitArg = f"git reset && git add {dirtyFilePath}  && git commit -m 'Change DO_LOOP in {commitName}'"
-			print("\033[1;32;40m " + gitCommitArg + "\033[0;37;40m")
-			sp.call(gitCommitArg, shell = True)
+            commitOnlyOneFile(dirtyFilePath, message = f"Change DO_LOOP in {commitName}")
 			#Wait 5 seconds just in case, for gitKraken to register any asm code change
 			time.sleep(5)
 			#####################################
