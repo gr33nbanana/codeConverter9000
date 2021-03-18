@@ -142,6 +142,12 @@ def detectUnstagedDifference(statusCommand, dumpFolderName, desiredExtension):
     else:
         return False
 
+def commitOnlyOneFile(filePath, message = ""):
+    commitArg = f"git reset && git add {filePath} && git commit -m '{message}'"
+    print("\033[1;32;40m " + commitArg + "\033[0;37;40m")
+    sp.call(commitArg, shell = True)
+
+
 #Main loop
 if __name__ == '__main__':
 	filesToDeclare = collectPaths()
