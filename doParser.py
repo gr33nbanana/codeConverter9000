@@ -125,6 +125,22 @@ def compileAndCheck(makeStr):
             flagWATCHDOG = True
     return flagWATCHDOG
 
+def detectUnstagedDifference(statusCommand, dumpFolderName, desiredExtension):
+    proc = sp.Popen(statusCommand, shell = True, stdout = sp.PIPE, stderr=sp.STDOUT)
+    flagASM = False
+    flagGitNotStaged = False
+
+    for line in proc.stdout.readlines():
+        line = line.decode("utf-8")
+        print(line)
+        if('Changes not staged for commit' in line):
+            flagGitNotStaged = True
+        if(flagGitNotStaged and 'modified' in line and dumpFolderName in line and desiredExtension in line):
+            flagASM = True
+    if(flagGitNotStaged and flagASM):
+        return True
+    else:
+        return False
 
 #Main loop
 if __name__ == '__main__':
