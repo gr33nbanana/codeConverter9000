@@ -97,6 +97,34 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
 			raise SystemExit
 	return paths
 
+def compileAndCheck(makeStr):
+    """
+    Compiles the program using the given makeStr as a command line
+    and parses through the terminal output. If it detects '100%' and
+    'watchdog' the program has compiled and returns True. Otherwise
+    it returns False
+
+    Parameters
+    ----------
+        makeStr : str
+            bash command line to compile the program
+
+    Returns
+    -------
+        bool
+            True of '100%' and 'watchdog' were printed on the terminal
+            False otherwise
+    """
+    print(makeStr)
+    proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+    flagWATCHDOG = False
+    for line in proc.stdout.readlines():
+        line = line.decode("utf-8")
+        print(line)
+        if('100%' in line and 'watchdog' in line):
+            flagWATCHDOG = True
+    return flagWATCHDOG
+
 
 #Main loop
 if __name__ == '__main__':
