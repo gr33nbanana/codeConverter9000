@@ -214,6 +214,49 @@ def insertStrAtIndecies(stringToInsert, originalString, listOfPositions, newLine
             accumulator += len(stringToInsert)
 
     return concatenatedString
+
+def getDoRegexIndecies(regex, givenString, storingList, globalIdx = 0):
+    """
+    Appends indecies of all the starting positions of matches for the given regex in the given string
+    to the provided list reference.
+    Parameters
+    ----------
+        regex : SRE_Pattern
+            regular experssion which is used to parse the given string
+        givenString : str
+            string on which the regular expression will be used
+        storingList : list
+            List of found indecies
+
+    Returns
+    -------
+        list : int
+            Returns a list containing the string indecies of found matches from the given regex in the given string.
+    """
+    match = re.search(regex, givenString, re.MULTILINE | re.IGNORECASE)
+    if( type(match) == type(None) ):
+        #if not found return
+        return
+    indentation = " "*(match.end(1) - match.start(1))
+    match2GlobalStart = globalIdx + match.start(2)
+    match2GlobalEnd   = globalIdx + match.end(2)
+    match3GlobalStart = globalIdx + match.start(3)
+    match3GlobalEnd   = globalIdx + match.end(3)
+
+    storingList.append( [indentation, [match2GlobalStart, match2GlobalEnd],[match3GlobalStart, match3GlobalEnd]])
+    #then run the same on the rest of the string and the matched strigns to check for sub occurance until nothing is found
+    # Give some Reference Index ?? to add to the match group indecies
+    # fun( globalIdx = 0):
+    #   fun( globalIdx = globalIdx + something)
+    # -----> fun(globalIdx = (globalIdx something) + somethingElse)
+
+    #The concatination of " " is needed to properly recognize a match group if it's exactly in the end
+    getDoRegexIndecies(regex, match.group(0) +" ", storingList, globalIdx = globalIdx + match.start(0))
+
+    getDoRegexIndecies(regex, givenString[match.end(3):], storingList, globalIdx = match3GlobalEnd)
+    # Containing string is in match.group() or match.group(0)
+    # BUT how do you keep the correct indeceis? --> append match.start + getIndex(matchString)
+
 #Main loop
 if __name__ == '__main__':
 	filesToDeclare = collectPaths()
