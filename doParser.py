@@ -172,6 +172,48 @@ def insertInString(originalString, cutIndex1, cutIndex2, stringToInsert):
      """
     return originalString[:cutIndex1] + stringToInsert + originalString[cutIndex2:]
 
+def insertStrAtIndecies(stringToInsert, originalString, listOfPositions, newLine = False):
+    """
+    Inserts a string at the give positions in the list of positions. If newLine is set to true the string will be inserted as a newline after the line of the given index
+
+    Parameters
+    ----------
+        stringToInsert : str
+            String which will be added at every index given in the list of indecies
+        originalString : str
+            String into which a new one will be inserted at all the indecies in the
+            list of indecies
+        listOfPositions : list : int
+            List of integers, representing the string index at which a desired string
+            should be added. Desired string is concatenated to the original string
+            at the given index position
+        newLine : bool
+            Says if the string to be added should be added as a newline after each
+            index position
+
+    Returns
+    -------
+        str
+            Returns a concatenated string containing the originalString with stringToInsert concatenated at every index from listOfPositions
+            If list is empty it returns the same string as the originalString
+    """
+    concatenatedString = originalString
+    accumulator = 0
+    stringToInsert = stringToInsert + '\n'
+    if( newLine ):
+        for index in listOfPositions:
+            startOfIndex = accumulator + index
+            newLineIndex = startOfIndex + concatenatedString[startOfIndex : ].find('\n') + 1
+            concatenatedString = concatenatedString[ : newLineIdx] + stringToInsert + concatenatedString[newLineIdx : ]
+            accumulator += len(stringToInsert)
+
+    else:
+        for index in listOfPositions:
+            startOfIndex = accumulator + index
+            concatenatedString = concatenatedString[ : startOfIndex] + stringToInsert + concatenatedString[startOfIndex : ]
+            accumulator += len(stringToInsert)
+
+    return concatenatedString
 #Main loop
 if __name__ == '__main__':
 	filesToDeclare = collectPaths()
