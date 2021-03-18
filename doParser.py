@@ -239,12 +239,20 @@ if __name__ == '__main__':
 			with open(filepath, 'r') as file:
 				test_str = file.read()
             ###############################
+
+            ############ FUNCTION #################
+            # Add start_Index and end_Index of every match group from regex
+            # First group is the indentation
+            # Parameters
+            #   fileString
+            #   regex
+            #
+            # Returns
+            # list [indentation, [match.start(2), match.end(2)],..., [match.start(n), match.end(n)]]
 			#test_str is the file_string
             #TODO :: encapsulate in a function the creation of doidx
             #doidx = getRegexIndecies(string, regex)
             # ---> return a list with all the matching regex ?
-			match = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
-			doidx = []
 
 			#for matchNum, match in enumerate(matches):
 			#Get positions of all old DO statements
@@ -252,6 +260,8 @@ if __name__ == '__main__':
 			#Group 1 -- indentation
 			#Group 2 -- first Address of DO LOOP
 			#Group 3 -- exit Address of DO LOOP
+            match = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
+            doidx = []
 			indentation = " "*(match.end(1) - match.start(1))
 			#FIND WHERE THE GOTO LABEL IS
 			###--?TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
@@ -266,29 +276,31 @@ if __name__ == '__main__':
 				warnings.warn(f"WARNING! Detected GOTO label {match.group(2)} could not be found with regex {regex} after DO statement at {match.start(1)}")
 				print('\a')
 				input(f"Remove staged and unstaged changes from {filepath}. Press any key to continue to next file")
+                #Raise ValueError ?
 				break
 
 			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
-
+            ##################################################################
 			#Add END DO line as a comment (don't Change anything else)
             #TODO :: can make adding a string to the text with an acumulator into a function:
             #        insertStrAtIndecies(str, list_of_positions)
             ############# FUNCTION ############################################
-			commented_string = test_str
-			comment_accumulator = 0
-			commentFlagEND_DO = "!END DO\n"
+
+			#commented_string = test_str
+			#comment_accumulator = 0
+			flagCommentEND_DO = "!END DO\n"
             #TODO :: make into a function: for idxPair in doidx:
             #       writeDostatement / writeStatement("DO" / function?, doidx)
             #      -- could be used in other scripts like adding type template, arithmetic IF
 
 			for idxPair in doidx:
-				#idxPair has indentation and index of first label at DO statement end second label where do GOES TO
+                commented_string = insertStrAtIndecies(flagCommentEND_DO, test_str, [idxPair[2][1]], newLine = True)
+				##idxPair has indentation and index of first label at DO statement end second label where do GOES TO
 				#idxPair = [" indentaion", [indexSTART,indexEND], [indexSTART, indexEND]]
-				commentNewLineIdx = comment_accumulator + idxPair[2][1] + commented_string[comment_accumulator + idxPair[2][1] : ].find('\n') + 1
-
-				commented_string = commented_string[ : commentNewLineIdx] + commentFlagEND_DO + commented_string[commentNewLineIdx : ]
-
-				comment_accumulator += len(commentFlagEND_DO)
+                #lineStartOfIndex = comment_accumulator + idxPair[2][1]
+				#commentNewLineIdx = lineStartOfIndex + commented_string[lineStartOfIndex : ].find('\n') + 1
+				#commented_string = commented_string[ : commentNewLineIdx] + flagCommentEND_DO + commented_string[commentNewLineIdx : ]
+				#comment_accumulator += len(flagCommentEND_DO)
             ###################### return new string #########################
             ##################################################################
 
@@ -331,23 +343,27 @@ if __name__ == '__main__':
 
 			#Write END DO statement in the file
 			flagEND_DO = 'END DO\n'
-			accumulator = 0
+			#accumulator = 0
 			for idxPair in doidx:
 				#Replace first Address with whiteSpace
-				test_str = test_str[ : idxPair[1][0]] + " "*(idxPair[1][1] - idxPair[1][0]) + test_str[idxPair[1][1] : ]
-				#Replace second Address with whiteSpace
-				#test_str = test_str[ : idxPair[2][0]] + " "*(idxPair[2][1] - idxPair[2][0]) + test_str[idxPair[2][1] : ]
+                test_str = insertInString(test_str, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
+                #####################
+				#test_str = test_str[ : idxPair[1][0]] + " "*(idxPair[1][1] - idxPair[1][0]) + test_str[idxPair[1][1] : ]
+				##Replace second Address with whiteSpace
+				##test_str = test_str[ : idxPair[2][0]] + " "*(idxPair[2][1] - idxPair[2][0]) + test_str[idxPair[2][1] : ]
 			#print("TEST STRING AFTER REMOVING DO ADDRESSES:")
 			#print(test_str)
             ############ FUNCTION ###########
             ## insertStrAtIndecies
 			for idxPair in doidx:
 				#Line after last Do statement
-				newLineIdx = accumulator + idxPair[2][1] + test_str[accumulator + idxPair[2][1]: ].find('\n') + 1
-				test_str = test_str[ : newLineIdx] + idxPair[0] + flagEND_DO + test_str[newLineIdx : ]
-				accumulator += len(idxPair[0]) + len(flagEND_DO)
-			#print("TEST STRING AFTER ADDING END DO STATEMENT:")
-			#print(test_str)
+                test_str = insertStrAtIndecies(idxPair[0] + flagEND_DO, test_str, [idxPair[2][1]])
+                ################################
+                #newLineIdx = accumulator + idxPair[2][1] + test_str[accumulator + idxPair[2][1]: ].find('\n') + 1
+				#test_str = test_str[ : newLineIdx] + idxPair[0] + flagEND_DO + test_str[newLineIdx : ]
+				#accumulator += len(idxPair[0]) + len(flagEND_DO)
+			##print("TEST STRING AFTER ADDING END DO STATEMENT:")
+			##print(test_str)
 			#
             ################ FUNCTION ########################
 			with open(filepath, 'w') as file:
