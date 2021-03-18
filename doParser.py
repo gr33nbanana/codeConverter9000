@@ -148,6 +148,30 @@ def commitOnlyOneFile(filePath, message = ""):
     sp.call(commitArg, shell = True)
 
 
+def insertInString(originalString, cutIndex1, cutIndex2, stringToInsert):
+    """
+    Creats a new string with provided string between the indecies of the original string and returns the concatenated string.
+
+    Parameters
+    ----------
+        originalString : str
+            Initial string in which a new one will be 'inserter'
+        cutIndex1 : int
+            The index (excluding) up to which the originalString is used
+            before inserting the desired new string
+        cutIndex2 : int
+            The index (including) from which the originalString is used
+            after adding the desired new string
+        stringToInsert : str
+            The desired string which will be 'inserted' between cutIndex1 and cutIndex2 of the originalString
+
+    Returns
+    -------
+        str
+            Returns a concatenated string = originalstring[:cutIndex1] + stringToInsert + originalString[cutIndex2:]
+     """
+    return originalString[:cutIndex1] + stringToInsert + originalString[cutIndex2:]
+
 #Main loop
 if __name__ == '__main__':
 	filesToDeclare = collectPaths()
