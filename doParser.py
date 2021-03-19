@@ -126,6 +126,28 @@ def compileAndCheck(makeStr):
     return flagWATCHDOG
 
 def detectUnstagedDifference(statusCommand, dumpFolderName, desiredExtension):
+    """
+    Runs the status command and parses through the terminal output. If there are any
+    unstaged changes of files in the specified folder with the specified extension
+    the function returns True. Otherwise it returns False
+
+    Parameters
+    ----------
+        statsuCommand : str
+            String used to call a subprocess for checking status. The terminal output
+            is then parsed for 'Changes not staged for commit' and 'modified'.
+        dumpFolderName : str
+            Name of the folder of the files for which a modification will be detected.
+        desiredExtension : str
+            The extension of the files for which a modification will be detected
+
+    Returns
+    -------
+        bool :
+            True if there were detected unstaged modifications in the folder to files
+            with the given extension.
+            False otherwise.
+    """
     proc = sp.Popen(statusCommand, shell = True, stdout = sp.PIPE, stderr=sp.STDOUT)
     flagASM = False
     flagGitNotStaged = False
@@ -142,7 +164,17 @@ def detectUnstagedDifference(statusCommand, dumpFolderName, desiredExtension):
     else:
         return False
 
-def commitOnlyOneFile(filePath, message = ""):
+def commitOnlyOneFile(filePath, message = "Bazinga commit"):
+    """
+    Calls git commands to commit filePath with the given Summary message
+
+    Parameters
+    ----------
+        filePath : str
+            Path of the file to be committed relative to the root git directory
+        message : str
+            Message which is used for the commit summary
+    """
     commitArg = f"git reset && git add {filePath} && git commit -m '{message}'"
     print("\033[1;32;40m " + commitArg + "\033[0;37;40m")
     sp.call(commitArg, shell = True)
@@ -184,9 +216,9 @@ def insertStrAtIndecies(stringToInsert, originalString, listOfPositions, newLine
             String into which a new one will be inserted at all the indecies in the
             list of indecies
         listOfPositions : list : int
-            List of integers, representing the string index at which a desired string
-            should be added. Desired string is concatenated to the original string
-            at the given index position
+            List of integers, representing the string index at which a desired
+            string should be added. Desired string is concatenated to the original
+            string at the given index position
         newLine : bool
             Says if the string to be added should be added as a newline after each
             index position
@@ -237,6 +269,10 @@ def getDoRegexIndecies(regex, givenString, storingList, globalIdx = 0):
     if( type(match) == type(None) ):
         #if not found return
         return
+    # MatchIdxList = []
+    #IDEA : For every match group do globalMatchStart = globalIdx + match.start(matchNum)
+    # append to MatchIdxList
+    #Then append to storingList
     indentation = " "*(match.end(1) - match.start(1))
     match2GlobalStart = globalIdx + match.start(2)
     match2GlobalEnd   = globalIdx + match.end(2)
@@ -244,18 +280,10 @@ def getDoRegexIndecies(regex, givenString, storingList, globalIdx = 0):
     match3GlobalEnd   = globalIdx + match.end(3)
 
     storingList.append( [indentation, [match2GlobalStart, match2GlobalEnd],[match3GlobalStart, match3GlobalEnd]])
-    #then run the same on the rest of the string and the matched strigns to check for sub occurance until nothing is found
-    # Give some Reference Index ?? to add to the match group indecies
-    # fun( globalIdx = 0):
-    #   fun( globalIdx = globalIdx + something)
-    # -----> fun(globalIdx = (globalIdx something) + somethingElse)
-
     #The concatination of " " is needed to properly recognize a match group if it's exactly in the end
-    getDoRegexIndecies(regex, match.group(0) +" ", storingList, globalIdx = globalIdx + match.start(0))
-
-    getDoRegexIndecies(regex, givenString[match.end(3):], storingList, globalIdx = match3GlobalEnd)
     # Containing string is in match.group() or match.group(0)
-    # BUT how do you keep the correct indeceis? --> append match.start + getIndex(matchString)
+    getDoRegexIndecies(regex, match.group(0) +" ", storingList, globalIdx = globalIdx + match.start(0))
+    getDoRegexIndecies(regex, givenString[match.end(3):], storingList, globalIdx = match3GlobalEnd)
 
 #Main loop
 if __name__ == '__main__':
@@ -275,7 +303,11 @@ if __name__ == '__main__':
 		if(type(doLoopExists) == type(None)):
 			print(f"No old syntax DO LOOP detected in: {filepath}")
 			continue
-		#While there are labeled do loops
+        # while the match result is not type None, search the file
+        # TODO :: Change to a for loop over all doidx
+        doidx = []
+        #All positions of DO Labels stored in doidx
+        #getDoRegexIndecies(regex, test_str, doidx)
 		while(type(doLoopExists != type(None) )):
 			#Read latest file version
             ##########FUNCTION############
@@ -283,36 +315,14 @@ if __name__ == '__main__':
 				test_str = file.read()
             ###############################
 
-            ############ FUNCTION #################
-            # Add start_Index and end_Index of every match group from regex
-            # First group is the indentation
-            # Parameters
-            #   fileString
-            #   regex
-            #
-            # Returns
-            # list [indentation, [match.start(2), match.end(2)],..., [match.start(n), match.end(n)]]
-			#test_str is the file_string
-            #TODO :: encapsulate in a function the creation of doidx
-            #doidx = getRegexIndecies(string, regex)
-            # ---> return a list with all the matching regex ?
-
 			#for matchNum, match in enumerate(matches):
 			#Get positions of all old DO statements
-			#print(f"matchNum: {matchNum}")
 			#Group 1 -- indentation
 			#Group 2 -- first Address of DO LOOP
 			#Group 3 -- exit Address of DO LOOP
             match = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
             doidx = []
 			indentation = " "*(match.end(1) - match.start(1))
-			#FIND WHERE THE GOTO LABEL IS
-			###--?TODO :: CHANGE from current regex to using group3 of the DO regex (it now finds where the 2nd matching group starts the line)
-			#labelVal = match.group(2)
-			#labelRegex = r"^" + labelVal + "\D"
-			#restOfString = test_str[match.end(2) : ]
-			#labelMatch = re.search(labelRegex, restOfString, re.IGNORECASE | re.MULTILINE)
-
 			labelStart = match.start(3) #int(match.end(2)) + int(labelMatch.start())
 			labelEnd = match.end(3)     #int(match.end(2)) + int(labelMatch.end())
 			if(type(match.group(3)) == type(None)):
@@ -321,32 +331,13 @@ if __name__ == '__main__':
 				input(f"Remove staged and unstaged changes from {filepath}. Press any key to continue to next file")
                 #Raise ValueError ?
 				break
-
 			doidx.append([indentation, [match.start(2),match.end(2)], [labelStart, labelEnd]])
             ##################################################################
 			#Add END DO line as a comment (don't Change anything else)
-            #TODO :: can make adding a string to the text with an acumulator into a function:
-            #        insertStrAtIndecies(str, list_of_positions)
-            ############# FUNCTION ############################################
-
-			#commented_string = test_str
-			#comment_accumulator = 0
 			flagCommentEND_DO = "!END DO\n"
-            #TODO :: make into a function: for idxPair in doidx:
-            #       writeDostatement / writeStatement("DO" / function?, doidx)
-            #      -- could be used in other scripts like adding type template, arithmetic IF
-
 			for idxPair in doidx:
                 commented_string = insertStrAtIndecies(flagCommentEND_DO, test_str, [idxPair[2][1]], newLine = True)
-				##idxPair has indentation and index of first label at DO statement end second label where do GOES TO
-				#idxPair = [" indentaion", [indexSTART,indexEND], [indexSTART, indexEND]]
-                #lineStartOfIndex = comment_accumulator + idxPair[2][1]
-				#commentNewLineIdx = lineStartOfIndex + commented_string[lineStartOfIndex : ].find('\n') + 1
-				#commented_string = commented_string[ : commentNewLineIdx] + flagCommentEND_DO + commented_string[commentNewLineIdx : ]
-				#comment_accumulator += len(flagCommentEND_DO)
-            ###################### return new string #########################
             ##################################################################
-
             #Write comments to file
             ########### FUNCTION ##################
 			with open(filepath, 'w') as file:
@@ -355,21 +346,18 @@ if __name__ == '__main__':
             #########################################
 			#Compile and commit any assembly changes with message "changes from comments"
 			#compile and SAVE asm diff from comment lines
-			#convert9000.py hephaestus --withCMake | --withMake
 			p = Path(f"{filepath}")
-
 			#Get only filename for commits
-            #CHANGE TO: commitName = p.name
-			commitName = Path(f"{filepath}").name
+			commitName = p.name
 			#CMake has object files named filename.F90.o , need to pass that to converter9000
 			fileName = p.name + ".o"
+            #convert9000.py hephaestus --withCMake | --withMake
 			hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={fileName}"
 			#call sisyphus to compile asm
 			print(hephaestusString)
 			sp.call(hephaestusString, shell = True)
 
 			#Check if program compiles
-            #  finishedCompilation() -- compiles with hephaestus, runs git status etc
 			if(not compileAndCheck( getMakeCommand() )):
                 # Move outside of function
 				print("Program did not compile")
@@ -383,37 +371,20 @@ if __name__ == '__main__':
 			sp.call(gitCommentCommitArg, shell=True)
 			#Wait 5 seconds just in case, for gitKraken to register any asm code change
 			#time.sleep(5)
-
 			#Write END DO statement in the file
 			flagEND_DO = 'END DO\n'
 			#accumulator = 0
 			for idxPair in doidx:
 				#Replace first Address with whiteSpace
                 test_str = insertInString(test_str, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
-                #####################
-				#test_str = test_str[ : idxPair[1][0]] + " "*(idxPair[1][1] - idxPair[1][0]) + test_str[idxPair[1][1] : ]
-				##Replace second Address with whiteSpace
-				##test_str = test_str[ : idxPair[2][0]] + " "*(idxPair[2][1] - idxPair[2][0]) + test_str[idxPair[2][1] : ]
-			#print("TEST STRING AFTER REMOVING DO ADDRESSES:")
-			#print(test_str)
-            ############ FUNCTION ###########
-            ## insertStrAtIndecies
 			for idxPair in doidx:
 				#Line after last Do statement
                 test_str = insertStrAtIndecies(idxPair[0] + flagEND_DO, test_str, [idxPair[2][1]])
-                ################################
-                #newLineIdx = accumulator + idxPair[2][1] + test_str[accumulator + idxPair[2][1]: ].find('\n') + 1
-				#test_str = test_str[ : newLineIdx] + idxPair[0] + flagEND_DO + test_str[newLineIdx : ]
-				#accumulator += len(idxPair[0]) + len(flagEND_DO)
-			##print("TEST STRING AFTER ADDING END DO STATEMENT:")
-			##print(test_str)
-			#
             ################ FUNCTION ########################
 			with open(filepath, 'w') as file:
 				print(f"\033[1;35;47m Updating DO statement in: {filepath} \033[0;37;40m")
 				file.write(test_str)
             ###################################################
-
 			#Save new assembly code after chaning DO LOOP
 			print(hephaestusString)
 			sp.call(hephaestusString, shell=True)
