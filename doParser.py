@@ -116,14 +116,21 @@ def compileAndCheck(makeStr):
             False otherwise
     """
     print(makeStr)
+    # Just return if the process has completed.
+    #return sp.Popen().returncode
     proc = sp.Popen(makeStr, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
-    flagWATCHDOG = False
-    for line in proc.stdout.readlines():
-        line = line.decode("utf-8")
-        print(line)
-        if('100%' in line and 'watchdog' in line):
-            flagWATCHDOG = True
-    return flagWATCHDOG
+    procReturnCode = proc.wait()
+    if(procReturnCode == 0):
+        return True
+    else:
+        return False
+    #flagWATCHDOG = False
+    #for line in proc.stdout.readlines():
+    #    line = line.decode("utf-8")
+    #    print(line)
+    #    if('100%' in line and 'watchdog' in line):
+    #        flagWATCHDOG = True
+    #return flagWATCHDOG
 
 def detectUnstagedDifference(statusCommand, dumpFolderName, desiredExtension):
     """
@@ -369,6 +376,7 @@ if __name__ == '__main__':
     		print(hephaestusString)
     		sp.call(hephaestusString, shell=True)
     		#Check if program compiles
+            #
     		if(not compileAndCheck( getMakeCommand() )):
     			print("\033[1;37;41m Program did not compile \033[0;37;40m")
     			print('\a')
