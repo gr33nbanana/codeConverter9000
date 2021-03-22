@@ -202,6 +202,7 @@ class TypeTemplate:
 
 #%%##############################################################
 #tst = TypeTemplate()
+#type(tst)
 #tst.template
 #tst.recognizedVariables
 #tst.addVariable("IMAX2")

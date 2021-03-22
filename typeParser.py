@@ -288,7 +288,8 @@ def compileForVariables(compileArgument, template, message = None):
         compileArgument : str
             string of bash command line to execute for compilation
         template : TypeTemplate
-            the template class which stores and handles the undeclared variables
+            the template class which stores and handles the undeclared
+            variables
         message : str
             Information message to print out to the terminal
     """
@@ -375,6 +376,7 @@ if __name__ == '__main__':
         indentationIdx = implicitStartIdx - fileString[:implicitStartIdx].rfind("\n") -1
         #Pass the detected indentaion to the template class
         template.indentation = indentationIdx
+
         ###########################################
         #FIND DIMENSION DECLARATION
         ##########################################
@@ -396,10 +398,10 @@ if __name__ == '__main__':
         #############################
         # Add Type template as comment lines in order to save any asm difference coming from just changing the number of lines
         # Template is commneted out!
+        #IDEA: Can change workflow to use the commentAll and uncommentAll methods of the template, in order to not keep track of the state.
         #############################
         writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
         writeFileString(filepath, writeString, message = f"\nWriting commented out template to : {filepath}")
-        #IDEA :: encapsulate callilng hephaestus in a function
         #compile and SAVE asm diff from comment lines
         #convert9000.py hephaestus --withCMake | --withMake
         p = Path(f"{filepath}")
@@ -419,11 +421,10 @@ if __name__ == '__main__':
         #######################################################
         switchToImplicitNoneStatement(filepath, fileString, dimensionCommentIdx, template, implicitDoubleParser = pars_implicit_Double_declaration)
         # Re evaluate implicit declaration index
+        #Optional, done just in case.
         fileString = readFileString(filepath, message = f"Opening to read {filepath}")
         #
         implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
-        #get postiion of IMPLICIT DOUBLE PRECISION
-        #contained in the first matching group
         implicitLineStartIdx = implicitDeclaration.start(0)
         implicitStartIdx = implicitDeclaration.start(1)
         implicitEndIdx = implicitDeclaration.end(1)

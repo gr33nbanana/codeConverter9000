@@ -72,7 +72,7 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
     return paths
 
 def ifWriter(indent: int, statement: str, value1: str, value2: str, value3: str) -> str:
-    """indent: Indentation of the statement (how many spaces)at begining of line. The statement is not returned indented, it should be overwritten at the start of its current position.
+    """indent: Indentation of the statement at begining of line. The statement is not returned indented, it should be overwritten at the start of its current position.
 
     statement: Arithmetic IF statement to rewrite ('IF(expresion)').
 
@@ -118,7 +118,9 @@ if __name__ == '__main__':
                 ifStatementString = ifWriter(indent, match.group(1), match.group(2), match.group(3), match.group(4))
 
                 ifList.append([match.start(1),match.end(4), ifStatementString])
-
+            #####################
+            ## TODO : Use insertStrAtIndecies function
+            ## TODO : remove setting writeString inside the with open, keep it clean
             accumulator = 0
             writeString = fileString
             for statement in ifList:
