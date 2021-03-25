@@ -92,13 +92,18 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
         #paths = glob("full/path/filename(.f)<-dot in fromType string")
         paths = glob(globArgument, recursive = args['--recursive'])
     try:
+        ignoreInfo = []
         #Read the gitignore file to remove all paths and files which git ignores.
         with open(".gitignore",'r') as file:
             print("Reading gitignore file")
             ignoreInfo = file.readlines()
-            for line in ignoreInfo:
-                if(line[0] == '#'):
-                    ignoreInfo.remove(line)
+        lineToRemove = []
+        for idx, line in enumerate(ignoreInfo):
+            if(line[0] == '#'):
+                #ignoreInfo.remove(line)
+                lineToRemove.append(line)
+        for line in lineToRemove:
+            ignoreInfo.remove(line)
         for idx, line in enumerate(ignoreInfo):
             ignoreInfo[idx] = line.replace("\n", "*")
             ignoreInfo[idx] = './' + ignoreInfo[idx]
@@ -111,7 +116,7 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
         paths = [n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo)]
 
 
-    except Exception:
+    except FileNotFoundError:
         warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
         if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
             pass
@@ -128,7 +133,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
     #<fromtype> = '.f' '.F90' contains a dot
     #<totype>   = '.f' '.F90' contains a dot
     outputlines = collectPaths()
-
+    print(f"COLLECTED PATHS: {outputlines}")
     for basePathAndName in outputlines:
         #basePathAndName contains   'fullpath/filename.f'            | fullpath/filename{fromType}
         #outputPathAndName contains 'fullopath/filename_.F90 or .F90 | fullpath/filename{toType}
@@ -272,6 +277,7 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
     else:
         #pathList has to be made here so that it contains strings and not PosixPaths
         for filePath in pathlib.Path('.').glob('**/*.o'):
+            strPath = str(filePath)
             pathList.append(strPath)
     #Function can be passed to mulitple threads for parralel processing
     #chunkSize can be specified, not much performance increase
