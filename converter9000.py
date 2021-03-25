@@ -1,8 +1,8 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --identifier=<extension> --withMake] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera][--withMake | --withCMake] [--only=<filename>... | --recursive]
+  converter9000.py convert (<fromtype> <totype>) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --identifier=<extension>] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
   converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --only=<filename>... --fromMake --onlyAssembly --onlyStrings]
 
 Commands:
