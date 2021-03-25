@@ -67,7 +67,7 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
         #print(f"Holder paths: {holder}")
         paths = holder
         #print(f"returned paths: {paths}")
-    except:
+    except Exception:
         warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
     return paths
 

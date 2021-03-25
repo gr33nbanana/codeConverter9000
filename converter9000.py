@@ -111,7 +111,7 @@ def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
         paths = [n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo)]
 
 
-    except:
+    except Exception:
         warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
         if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
             pass
@@ -142,7 +142,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         try:
             print(findentArg)
             sp.call(findentArg, shell = True)
-        except:
+        except Exception:
             print("Error while trying to run findent\nFiles might not be in the current or specified path")
         if(sisyph):
             #Overwrite the fixed format code in basePathAndName with the free format code in outputPathAndName
@@ -156,7 +156,7 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
             try:
                 print("Removing " + basePathAndName)
                 os.remove(basePathAndName)
-            except:
+            except Exception:
                 print("Error while deleting file: " + basePathAndName)
 
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
@@ -171,7 +171,7 @@ def runMakeCleanBuilt():
             print("Compiling program")
             #sp.call("make", shell = True)
             compileFiles()
-    except:
+    except Exception:
         print("No option given for compilation. Add --withMake or --withCMake when calling the script.")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
 def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
@@ -298,7 +298,7 @@ def checkForDifference( givenType ):
     #default "mkdir ./Diff/"
     try:
         os.mkdir(args['--diff_at'])
-    except:
+    except Exception:
         pass
     print("CHECKING DIFFERENCES")
     #File location
@@ -369,7 +369,7 @@ def renameAndClean():
             shellArg = f"git mv {oldPath} {outputPath}"
             sp.call(shellArg, shell=True)
             print(shellArg)
-        except:
+        except Exception:
             print(f"Could not execute {shellArg}")
             continue
 
