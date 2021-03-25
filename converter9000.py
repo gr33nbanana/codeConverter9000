@@ -405,7 +405,7 @@ def renameAndClean():
                 file.write(fileString)
 
         except FileNotFoundError:
-            warnings.war("\033[1;33;40m Could not file CMakeLists.txt make sure to update extensions of old fortran files where needed.\n\033[0;37;40m")
+            warnings.war("\033[1;33;40m Could not find CMakeLists.txt make sure to update extensions of old fortran files where needed and save assembly data with hephaestus command.\n\033[0;37;40m")
 
 if __name__ == '__main__':
     if(args['convert']):
