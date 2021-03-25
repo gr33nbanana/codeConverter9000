@@ -179,7 +179,7 @@ def runMakeCleanBuilt():
     except Exception:
         print("No option given for compilation. Add --withMake or --withCMake when calling the script.")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
-def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
+def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['--identifier']):
     """
     givenName:    str (pathName of object file)
     outputFolder: str, path where to save the assembly files
@@ -190,6 +190,11 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
     #Returns a list of the commands it ran, return object is later printed
     fileName = givenName
+    baseNameNoExt = os.path.basename(fileName)
+    if(args['--withCMake']):
+        #CMake saves files as name.f.o.asm, we want name.asm to be able to onverwrite and compare
+        baseNameNoExt = baseNameNoExt.replace('.f.o', '')
+        baseNameNoExt = baseNameNoExt.replace('.F.o','')
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     returnArg1 = ''
     returnArg2 = ''
@@ -208,7 +213,7 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         #argument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
         shellArgument = "objdump -d {objectName} > {outputPath}{name}{extension}.asm"
-        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType)
+        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = baseNameNoExt , extension = fileType)
         sp.call(shellArgument, shell = True)
         returnArg1 = shellArgument
 
@@ -221,7 +226,7 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = ""):
         #printList.append(shellArgument)
         #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
         shellArgument = "strings -d {objectName} > {outputPath}{name}{extension}.txt"
-        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType )
+        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = baseNameNoExt, extension = fileType )
 
         sp.call(shellArgument, shell = True)
         returnArg2 = shellArgument
@@ -387,7 +392,10 @@ if __name__ == '__main__':
         #Only convert files and save them with the same name
         filterForType(toType = '_.F90', remove = False)
         renameAndClean()
-        hephaestus()
+        if(args['--withMake']):
+            hephaestus()
+        if(args['--withCMake']):
+            print("Please rename file extensions in CMakeLists and run the following command the save the new assembly code:\n converter9000.py hephaestus --withCMake")
 
 
 
