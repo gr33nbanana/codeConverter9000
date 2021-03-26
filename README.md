@@ -34,7 +34,7 @@ After the files are changed and you are using CMake you have to update any depen
 Start by navigating to the root folder which should contain the `.gitignore` file.\
 To change the fixed format `.f` syntax to free format run:
 ```
-python3 (path/to/codeConverter9000/)converter9000.py sisyphus .f uphill (--withCMake | --withMake)
+python3 (path/to/codeConverter9000/)converter9000.py sisyphus .f uphill (--withCMake | --withMake) --recursive
 ```
 **NOTE** Specify only `--withCmake` or `--withMake` depending on which compiler you use.
 

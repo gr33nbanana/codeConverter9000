@@ -368,6 +368,7 @@ def renameAndClean():
     If '--clean' option is given it will delete the '_.F90' helper files
     Only renames 30 files then prompts a user key stroke. Pausing is inteded to check if GitKraken or other Version Control has correctly detected a rename."""
     paths = collectPaths(fromType = '_.F90')
+    print(f"collected paths: {paths}")
     maxCount = 30
     for pathName in paths:
         if(maxCount <= 0):
@@ -405,7 +406,7 @@ def renameAndClean():
                 file.write(fileString)
 
         except FileNotFoundError:
-            warnings.war("\033[1;33;40m Could not find CMakeLists.txt make sure to update extensions of old fortran files where needed and save assembly data with hephaestus command.\n\033[0;37;40m")
+            warnings.war("\033[1;31;40m Could not find CMakeLists.txt make sure to update extensions of old fortran files where needed and save assembly data with hephaestus command.\n\033[0;37;40m")
 
 if __name__ == '__main__':
     if(args['convert']):
@@ -431,8 +432,6 @@ if __name__ == '__main__':
         #Only convert files and save them with the same name
         filterForType(toType = '_.F90', remove = False)
         print("\033[1;33;40m Sisyphus uphill has completed.\n\033[0;37;40m")
-        if(args['--withCMake']):
-            print("\033[1;33;40m To continue update the extensions in CMakeLists.txt then commit the changed fortran files. If you do not, git might not be able to keep the history when they are renamed \033[0;37;40m")
         print("\033[1;31;40m NOTE: Make sure you have staged or saved assembly differences before continuing with sisyphus downhill command \033[0;37;40m")
 
     elif(args['sisyphus'] and args['downhill']):
