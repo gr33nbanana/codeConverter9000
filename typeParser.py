@@ -432,7 +432,7 @@ if __name__ == '__main__':
         #################################################
         # Compile to gather undeclared variable names
         #################################################
-        compileForVariables(compileArgument = getMakeCommand(), template, message = "Compiling with IMPLICIT NONE statement to get udneclared variables\n")
+        compileForVariables(getMakeCommand(), template, message = "Compiling with IMPLICIT NONE statement to get udneclared variables\n")
 
         writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
         writeFileString(filepath, writeString, message = f"Writing declared type variables to: {filepath}")
@@ -440,7 +440,7 @@ if __name__ == '__main__':
         ###########################################################
         #Compile to check for undeclared functions
         ###########################################################
-        compileForVariables(compileArgument = getMakeCommand(), template, message = "\nCompiling with IMPLICIT NONE satement to get udneclared functions\n")
+        compileForVariables( getMakeCommand(), template, message = "\nCompiling with IMPLICIT NONE satement to get udneclared functions\n")
 
         writeString = insertInString(fileString, implicitLineStartIdx, implicitEndIdx, template.getTemplate())
         writeFileString(filepath, writeString, message = f"Writing declared type functions to: {filepath}")
