@@ -1,7 +1,7 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --identifier=<extension>] [--only=<filename>... | --recursive]
+  converter9000.py convert (<fromtype> <totype>) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --identifier=<extension> --clean] [--only=<filename>... | --recursive]
   converter9000.py sisyphus <fromtype> (uphill | downhill) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
   converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --only=<filename>... --fromMake --onlyAssembly --onlyStrings]
 
@@ -30,7 +30,7 @@ Options:
 
   --version                 Show version.
 
-  -p --path=<>              The path of the folder or files to be converted if it is not the current path. Include last forward slash. E.g. './work_folder/this_folder/' [default: ./]
+  -p --path=<>              The path of the folder or files to be converted if it is not the current path. Include last forward slash. E.g. './root_folder/this_folder/' [default: ./]
   s
   -r --recursive            If specified the program will run recursively
 
@@ -133,7 +133,6 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
     #<fromtype> = '.f' '.F90' contains a dot
     #<totype>   = '.f' '.F90' contains a dot
     outputlines = collectPaths()
-    print(f"COLLECTED PATHS: {outputlines}")
     for basePathAndName in outputlines:
         #basePathAndName contains   'fullpath/filename.f'            | fullpath/filename{fromType}
         #outputPathAndName contains 'fullopath/filename_.F90 or .F90 | fullpath/filename{toType}
@@ -157,13 +156,13 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
             #sp.call(catArgument, shell = True)
             #os.remove(outputPathAndName)
 
-        if(remove):
-            try:
-                print("Removing " + basePathAndName)
-                os.remove(basePathAndName)
-            except Exception:
-                print("Error while deleting file: " + basePathAndName)
-
+#        if(remove):
+#            try:
+#                print("Removing " + basePathAndName)
+#                os.remove(basePathAndName)
+#            except Exception:
+#                print("Error while deleting file: " + basePathAndName)
+#
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
 #TODO :: Convert paths to absolute pahts after getting them in docopt
 def runMakeCleanBuilt():
@@ -195,6 +194,8 @@ def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['--i
         #CMake saves files as name.f.o.asm, we want name.asm to be able to onverwrite and compare
         baseNameNoExt = baseNameNoExt.replace('.f.o', '')
         baseNameNoExt = baseNameNoExt.replace('.F.o','')
+        baseNameNoExt = baseNameNoExt.replace('.f90.o','')
+        baseNameNoExt = baseNameNoExt.replace('.F90.o','')
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     returnArg1 = ''
     returnArg2 = ''
@@ -272,11 +273,20 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
         print(" FILES ASSIGNED TO pathList: ", changedOFiles)
         pathList = changedOFiles
     elif( len(args['--only']) > 0 and not args['--fromMake'] ):
-        onlyFiles = args['--only'][0].split(',')
-        for fileName in onlyFiles:
-            oName = pathlib.Path(fileName).with_suffix('.o')
-            for oPathAndName in pathlib.Path('.').glob(f"**/{oName}"):
-                pathList.append(oPathAndName)
+        if(args['--withMake']):
+            onlyFiles = args['--only'][0].split(',')
+            for fileName in onlyFiles:
+                oName = pathlib.Path(fileName).with_suffix('.o')
+                for oPathAndName in pathlib.Path('.').glob(f"**/*{oName}"):
+                    oPathAndName = str(oPathAndName)
+                    pathList.append(oPathAndName)
+        #CMake saves object files differently
+        elif(args['--withCMake']):
+            onlyFiles = args['--only'][0].split(',')
+            for fileName in onlyFiles:
+                fileName = fileName + ".o"
+                for oPathAndName in pathlib.Path('.').glob(f"**/*{fileName}"):
+                    pathList.append(str(oPathAndName))
         #paths = [args['--path'] + name for name in oFiles]
         #pathList = paths
     else:
@@ -284,6 +294,7 @@ def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['-
         for filePath in pathlib.Path('.').glob('**/*.o'):
             strPath = str(filePath)
             pathList.append(strPath)
+    print(f"Gathered files: {pathList}")
     #Function can be passed to mulitple threads for parralel processing
     #chunkSize can be specified, not much performance increase
     #chunkSize = int(len(pathList) / mp.cpu_count() )
@@ -383,6 +394,18 @@ def renameAndClean():
         except Exception:
             print(f"Could not execute {shellArg}")
             continue
+        try:
+            with open('./CMakeLists.txt','r') as file:
+                fileString = file.read()
+            oldFileName = os.path.basename(oldPath)
+            newFileName = os.path.basename(outputPath)
+            fileString = fileString.replace(oldFileName, newFileName)
+
+            with open('./CMakeLists.txt', 'w') as file:
+                file.write(fileString)
+
+        except FileNotFoundError:
+            warnings.war("\033[1;33;40m Could not find CMakeLists.txt make sure to update extensions of old fortran files where needed and save assembly data with hephaestus command.\n\033[0;37;40m")
 
 if __name__ == '__main__':
     if(args['convert']):
@@ -407,6 +430,10 @@ if __name__ == '__main__':
 
         #Only convert files and save them with the same name
         filterForType(toType = '_.F90', remove = False)
+        print("\033[1;33;40m Sisyphus uphill has completed.\n\033[0;37;40m")
+        if(args['--withCMake']):
+            print("\033[1;33;40m To continue update the extensions in CMakeLists.txt then commit the changed fortran files. If you do not, git might not be able to keep the history when they are renamed \033[0;37;40m")
+        print("\033[1;31;40m NOTE: Make sure you have staged or saved assembly differences before continuing with sisyphus downhill command \033[0;37;40m")
 
     elif(args['sisyphus'] and args['downhill']):
         if not ( pathlib.Path(args['--dump_at']).exists() ):
