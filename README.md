@@ -27,30 +27,42 @@ The script creates a folder named 'DumpedFiles' by default in which it stores th
 ## Converting fixed-format to free-format
 The conversion from fixed to free format is done in two parts.\
 First the free-format fortran code is saved in temporary files with  the extension `_.F90` and the contents of the `.f` file is overwritten.\
-Then the `.f` file extension is changed to `.F90` and the helper `_.F90` file is removed if the option is given.\
+Then the `.f` file extension is changed to `.F90` and the helper `_.F90` file is removed if the option `--clean` is given.\
 After the files are changed and you are using CMake you have to update any dependencies on the file extension before compiling again to overwrite the assembly code and see if there are any undesired differences.
 
 
-To run both steps recursively, navigate to your root file which should also contain your `.gitignore` file and run:
+Start by navigating to the root folder which should contain the `.gitignore` file.\
+To change the fixed format `.f` syntax to free format run:
 ```
-python3 (path_to_codeConverter9000)/codeConverter9000.py convert .f .F90 (--withCmake | --withMake) --recursive
+python3 (path/to/codeConverter9000/)converter9000.py sisyphus .f uphill (--withCMake | --withMake)
 ```
-**NOTE** Specify only `--withCmake` or `--withMake` depneding on which commpiler you use.
+**NOTE** Specify only `--withCmake` or `--withMake` depending on which compiler you use.
 
 If no `--dump_at=` is specified and the default assembly dump folder name is not detected, the script will create the folder, compile the program and save the initial assembly code for comparison.
 
 If you want to convert only one folder run:
 ```
-python3 (path_to_codeConverter9000)/converter9000.py convert .f .F90 (--WithCmake | --withMake) --path=(full/path/to/desired/folder/)
+python3 (path/to/codeConverter9000)/converter9000.py sisyphus .f uphill (--withCmake | --withMake) --path=(full/path/to/desired/folder/)
 ```
 **NOTE** You have to add the last backslash in the folder path.
 
 You can also convert only one file in that folder by specifying ```--only=(file_name.f)```
 
-### Using CMake
-If you are compiling the fortran files with CMake, after the free formatting you have to manually go to your `CMakeLists.txt` file and update the filenames or paths with the correct new `.F90` extension.
-### Using Make
+* **Using CMake**\
+If you are compiling the fortran files with CMake and you do not have a CMakeLists.txt file in the root directory, after the free formatting you have to manually go to your `CMakeLists.txt` file and update the filenames or paths with the correct new `.F90` extension. If not the next step will not be able to compile the program and overwrite the assembly code so you would have to do it manually using the `hephaestus --withCMake` command.
+* **Using Make**\
 If you are compiling the fortran files with make, if you do not specify the `--clean` option, the helper files will not be deleted automatically and they might be compiled as well so you might get some extra assembly files.
+
+## **IMPORTANT:**
+* At this stage if the files were formatted correctly, make sure to commit the changed contents of the `.f` files before proceeding. If this is not done Git will not be able to keep the file history after its extension is changed in the next step and will instead show a newly created `.F90` file.\
+After comitting stage the created `.asm` assembly files. This way if there are any changes to the assembly files in the end, they will show up as unstaged differences.
+
+
+Next to change the extension of the `.f` files and delete the `_.F90` helper files run:
+```
+python3 (path/to/codeConverter9000)/converter9000.py sisyphus .f downhill (--withCMake | --withMake) --clean
+```
+
 
 ## Type declaring undeclared variables
 
