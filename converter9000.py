@@ -1,9 +1,9 @@
 """Converter9000.py
 
 Usage:
-  converter9000.py convert (<fromtype> <totype>) [--path=<location> --dump_at=<dumppath> --diff_at=<diffpath>] [--only=<filename>... | --recursive]
-  converter9000.py sisyphus <fromtype> (uphill | downhill) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
-  converter9000.py hephaestus <fromtype> [--dump_at=<dumppath> --fromMake --onlyAssembly --onlyStrings]
+  converter9000.py convert (<fromtype> <totype>) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --identifier=<extension> --clean] [--only=<filename>... | --recursive]
+  converter9000.py sisyphus <fromtype> (uphill | downhill) (--withMake | --withCMake) [--path=<location> --dump_at=<dumppath> --clean --fromMake --Hera] [--only=<filename>... | --recursive]
+  converter9000.py hephaestus (--withMake | --withCMake) [--identifier=<extension> --dump_at=<dumppath> --only=<filename>... --fromMake --onlyAssembly --onlyStrings]
 
 Commands:
   convert            The program saves the converted files with a different name and checks for differences between the old and new files in the assembly code and string data
@@ -17,22 +17,39 @@ Commands:
 
 Arguments:
   <fromtype>         Filetype to be converter only .f supported now
-  <totype>           Filetype to convert to only .f90 supported now
+  <totype>           Filetype to convert to only .F90 supported now
   <dumppath>         Folder path where .o file information is saved
   <diffpath>         Folder path where to gather results from diff
+  <filename>         Name of the file to convert including extension.
+  <extension>        Optional extension for saved asm file when running hephaestus
 
 Options:
   -h --help                 Show this documentation.
+
+  --identifier=<extension>               Specify if the saved asm should have an indentifiying extension in their name e.g.'file.extension.asm'. [default: ]
+
   --version                 Show version.
-  -p --path=<>              The path of the folder or files to be converted if it is not the current path [default: ./]
+
+  -p --path=<>              The path of the folder or files to be converted if it is not the current path. Include last forward slash. E.g. './root_folder/this_folder/' [default: ./]
+  s
   -r --recursive            If specified the program will run recursively
-  -o --only <name1,name2>   Only convert the given files or files seperated by comma -o file1.txt,file2.cpp...
+
+  -o --only <name1,name2>   Only convert the given files or files seperated by comma.Include file extension.\n\t\t\t    -o file1.txt,file2.cpp,file3.f...
+
   --dump_at=<>              Specify a different folder (created if not existant) to gather .o file information [default: ./DumpedFiles/]
-  --diff_at=<>              Specify a folder in which to save the output files from checkForDifference [default: ./Diff/]
-  --clean                   Removes all temporary _.f90 files and the corresponding formated .f files and saves a single .f90 file [default: False]
-  --fromMake                Specifies if program is called from a Makefile and hephaestus() doesn't run make built and make clean command lines [default: False]
+
+  --clean                   Removes all temporary _.F90 files and the corresponding formated .f files and saves a single .F90 file [default: False]
+
+  --fromMake                Specifies if program is called from a Makefile. Files specified with --only are understood to be object files [default: False]
+
+  --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.F90' files are not deleted they will compile and create redundant object files. [default: False]
+
+  --withCMake              Specify if the files are built using CMake instead of make. compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.F90' files are not deleted they will compile and create redundant object files. [default: False]
+
   --Hera                    Rejects hephaestus for being ugly, hephaestus() does not run 'make built' or gather .asm files [default: False]
+
   --onlyAssembly            Specifies that only the .asm data should be saved from object files [default: False]
+
   --onlyStrings             Specifies that only the .txt string data should be saved from object files [default: False]
 
 """
@@ -44,37 +61,81 @@ import os
 import pathlib
 import shutil
 import multiprocessing as mp
+from functools import partial
 import time
+import fnmatch
+import warnings
 
-args = docopt(__doc__, version = '2.1')
+args = docopt(__doc__, version = '3.0')
 #location = './' by default, something like 'D:/Uni/' if specified
-
+def compileFiles():
+    """Calls the make or CMake command line for compiling the project.
+    """
+    if(args['--withMake']):
+        sp.call("make built", shell = True)
+    elif(args['--withCMake']):
+        sp.call("cd _build && make", shell= True)
 def collectPaths(location = args['--path'], fromType = args['<fromtype>']):
-    globArgument = location + '*%s'%fromType
+    """Returns a list of all files in the specified --path with the specified extension <fromtype>
+    """
+    globArgument = location + f"*{fromType}"        #'*%s'%fromType
     if ( args['--recursive'] == True ):
-        globArgument = location + '**/*%s'%fromType
-
+        globArgument = location + f"**/*{fromType}"#'**/*%s'%fromType
     if(len(args['--only']) > 0):
         #args['--only'][0] is the string "file1.txt,file2.cpp..."
         #parses the string to a list of file names
         files = args['--only'][0].split(',')
-        #["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
         paths = [location + name for name in files]
-        #print("PATHS:\n" + str(paths))
+        #paths = ["./location/fileone.f", "./location/filetwo.f", ["./location/" + "filename.f"]
+        #print("DEBUGGING: COLLECTED PATHS:\n" + str(paths))
     elif(len(args['--only']) == 0):
         #paths = glob("full/path/filename(.f)<-dot in fromType string")
         paths = glob(globArgument, recursive = args['--recursive'])
+    try:
+        ignoreInfo = []
+        #Read the gitignore file to remove all paths and files which git ignores.
+        with open(".gitignore",'r') as file:
+            print("Reading gitignore file")
+            ignoreInfo = file.readlines()
+        lineToRemove = []
+        for idx, line in enumerate(ignoreInfo):
+            if(line[0] == '#'):
+                #ignoreInfo.remove(line)
+                lineToRemove.append(line)
+        for line in lineToRemove:
+            ignoreInfo.remove(line)
+        for idx, line in enumerate(ignoreInfo):
+            ignoreInfo[idx] = line.replace("\n", "*")
+            ignoreInfo[idx] = './' + ignoreInfo[idx]
+            #paths need './' for root, and * at end to ignore anything starting with the specified characters
+            # './_*' -- for ./_build etc
+            # './*.o*' for any ./path/file.F90.o* file
+        print(f"IgnoreInfo: {ignoreInfo}")
+        #paths have been collected
+        #Remove all matching gitignore paths from the return path list
+        paths = [n for n in paths if not any(fnmatch.fnmatch(n,ignore) for ignore in ignoreInfo)]
+
+
+    except FileNotFoundError:
+        warnings.warn("Warning: No .gitignore file found, cannot exclude paths not under version control in current folder")
+        if(input("Do you wish to continue? y/n: ").upper() == 'Y'):
+            pass
+        else:
+            raise SystemExit
     return paths
 
 def filterForType( location = args['--path'], fromType = args['<fromtype>'], toType = args['<totype>'], remove = True, sisyph = args['sisyphus'] ):
+    """Runs findent on collected paths from collectPaths(),
+    if sisyphus -- overwrites .f files with free format
+    if remove   -- removes all paths from collectPaths(), intended for removing helper files '_.F90'
+    """
     #location = './' by default, something like 'D:/Uni/' if specified
-    #<fromtype> = '.f' '.f90' contains a dot
-    #<totype>   = '.f' '.f90' contains a dot
+    #<fromtype> = '.f' '.F90' contains a dot
+    #<totype>   = '.f' '.F90' contains a dot
     outputlines = collectPaths()
-
     for basePathAndName in outputlines:
         #basePathAndName contains   'fullpath/filename.f'            | fullpath/filename{fromType}
-        #outPutPathAndName contains 'fullopath/filename_.f90 or .f90 | fullpath/filename{toType}
+        #outputPathAndName contains 'fullopath/filename_.F90 or .F90 | fullpath/filename{toType}
         outputPathAndName = basePathAndName[: - len(fromType)]
         outputPathAndName = outputPathAndName.__add__(toType)
         #Extra formatting for Windows
@@ -85,107 +146,147 @@ def filterForType( location = args['--path'], fromType = args['<fromtype>'], toT
         try:
             print(findentArg)
             sp.call(findentArg, shell = True)
-        except:
+        except Exception:
             print("Error while trying to run findent\nFiles might not be in the current or specified path")
         if(sisyph):
+            #Overwrite the fixed format code in basePathAndName with the free format code in outputPathAndName
             catArgument = "cat {copying} > {pasting}".format(copying = outputPathAndName, pasting = basePathAndName)
             print(catArgument)
             shutil.copy2(outputPathAndName, basePathAndName)
             #sp.call(catArgument, shell = True)
             #os.remove(outputPathAndName)
 
-        if(remove):
-            try:
-                print("Removing " + basePathAndName)
-                os.remove(basePathAndName)
-            except:
-                print("Error while deleting file: " + basePathAndName)
-
+#        if(remove):
+#            try:
+#                print("Removing " + basePathAndName)
+#                os.remove(basePathAndName)
+#            except Exception:
+#                print("Error while deleting file: " + basePathAndName)
+#
 #since the code can only compile in Ubuntu, run make clean, make built and dump .o files
-
+#TODO :: Convert paths to absolute pahts after getting them in docopt
 def runMakeCleanBuilt():
+    """
+    Runs the functions to compile the program if the optional flgas are given
+    """
     try:
-        #If --fromMake is specified do not call 'make built'
-        if not (args['--fromMake']):
-            print("Running make cleand and make built")
-            sp.call("make clean", shell = True)
-            sp.call("make built", shell = True)
-    except:
-        print("Are you sure make file is in this directory?")
+        #If --withMake or --withCMake is specified do not call 'make built'
+        if (args['--withMake'] or args['--withCMake']):
+            print("Compiling program")
+            #sp.call("make", shell = True)
+            compileFiles()
+    except Exception:
+        print("No option given for compilation. Add --withMake or --withCMake when calling the script.")
 #For now only works for gatherDumpedOFiles and outputfolder is defined, can be generalized to have any outputfolder (from different functions) But would need to change pool.map!(check doc)
-def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['<fromtype>']):
+def runOnFiles(givenName, outputFolder = args['--dump_at'], fileType = args['--identifier']):
+    """
+    givenName:    str (pathName of object file)
+    outputFolder: str, path where to save the assembly files
+    fileType:     str, add an additional extension to the filename, controlled by --extension option
+    Runs parallel on individual path name of object files, gathering the assembly code and string data.
+    Returns a string of the commands it ran.
+    """
     #Runs 'objdump -d filename.o > filename.asm' on all given object files to save assembly code
+    #Returns a list of the commands it ran, return object is later printed
     fileName = givenName
-    if(args['--fromMake']):
-        fileType = ''
+    baseNameNoExt = os.path.basename(fileName)
+    if(args['--withCMake']):
+        #CMake saves files as name.f.o.asm, we want name.asm to be able to onverwrite and compare
+        baseNameNoExt = baseNameNoExt.replace('.f.o', '')
+        baseNameNoExt = baseNameNoExt.replace('.F.o','')
+        baseNameNoExt = baseNameNoExt.replace('.f90.o','')
+        baseNameNoExt = baseNameNoExt.replace('.F90.o','')
     #Given name is a single file PATH when the function is called from multirpocesses Pool function
     returnArg1 = ''
     returnArg2 = ''
+    #############################################################
+    #Following two IF statements do the following:
+    # IF nothing is specified:                  Save .asm and .txt information
+    # IF BOTH --onlyStrings and --onlyAssembly: Save .asm and .txt information
+    # IF ONLY --onlyStrings is specified:       Save just the .txt information
+    # IF ONLY --onlyAssembly is specified:      Save just the .asm information
     if(not args['--onlyStrings'] or args['--onlyAssembly']):
+        # Saves the assembly code
+        #Runs by default.
+        #If --onlyStrings is specified doesnt' run
+        #If --onlyAssembly is specified only this shellarg runs, no string data saved
+        ###########
         #objdump -d someFolder/name.o > outputFolder/name.fileType.asm
         #argument = "objdump -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".asm"
         shellArgument = "objdump -d {objectName} > {outputPath}{name}{extension}.asm"
-        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType)
-        #print(shellArgument)
-        #printList.append(shellArgument)\
-        #
-        #!!!!!!
-        #Runs by default, if --onlyStrings is specified, doesnt' run, if --onlyAssembly is specified only this shellarg runs, no string data saved
-        #!!!!!!
+        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = baseNameNoExt , extension = fileType)
         sp.call(shellArgument, shell = True)
         returnArg1 = shellArgument
 
     if(not args['--onlyAssembly'] or args['--onlyStrings']):
+        # Saves the string information from the object file.
+        #Runs by default.
+        #If --onlyAssembly is specified it doesnt' run
+        #If --onlyStrings is specified only this shellarg runs, no asm data saved
+        ########
+        #printList.append(shellArgument)
         #shellArgument = "strings -d " + fileName + " > " + outputFolder + os.path.basename(fileName) + "." + fileType + ".txt"
         shellArgument = "strings -d {objectName} > {outputPath}{name}{extension}.txt"
-        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = os.path.basename(fileName), extension = fileType )
+        shellArgument = shellArgument.format(objectName = fileName, outputPath = outputFolder, name = baseNameNoExt, extension = fileType )
 
-        #printList.append(shellArgument)
-        #!!!!!!
-        #Runs by default, if --onlyAssembly is specified it doesnt' run, if --onlyStrings is specified only this shellarg runs, no string data saved
-        #!!!!!!
         sp.call(shellArgument, shell = True)
         returnArg2 = shellArgument
-
+    #############################################################
     #print(shellArgument)
     returnShellArgument = "{shellArgument1}, {shellArgument2}".format(shellArgument1 = returnArg1, shellArgument2 = returnArg2)
     return returnShellArgument
 
 calledCommands = []
 #mostly a filler function to pass to map_async and get all the shell arguments that are returned
-def testCallBack(resultObject):
+def printCallBack(resultObject):
+    """resultObject: result given back by the parallel function.
+    appends resultObject to a global caledCommands list, to print after all function calls have been made
+    """
     global calledCommands
     calledCommands.append(resultObject)
     print("DONE")
 
-def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
+def gatherDumpedOFiles( extension = args["--identifier"], outputFolder = args['--dump_at'] ):
+    """
+    extension:    string
+    outputFolder: string
+    Gathers the assembly and string data from object files. If extension is specified, inserts the given string in the name of the output assembly file: 'fileName.extension.asm'
+    """
     startTime = time.time()
     #extension is only information about the source of the object files and just gets added to the saved file name
-    if(args['--fromMake']):
-        fileType = ''
-    try:
+    if(args['sisyphus']):
+        extension = ''
+    if not ( pathlib.Path(args['--dump_at']).exists() ):
+        #If there is no folder specified for dumping the assembly code, make one.
         os.mkdir(outputFolder)
-    except:
-        pass
+    #Run in parallel the following:
     #objdump -d ./folders/file.o > file.o.asm
     #collects .o files recursively
-    #Collect print statements here to not run print() all the time
-    #printList = []
+    #Collect print statements in global list to not run print() all the time
     print("Gathering Assembly code and Strings")
     pathList = []
     #Makefile provides object file names seperated by space
-    # whereas the docs tell users to seperate by comma
+    # whereas docopt seperates by comma
+    # Handle which files toa add to pathlist:
     if( len(args['--only']) > 0 and args['--fromMake']):
         changedOFiles = args['--only'][0].split(' ')
         print(" FILES ASSIGNED TO pathList: ", changedOFiles)
         pathList = changedOFiles
     elif( len(args['--only']) > 0 and not args['--fromMake'] ):
-        onlyFiles = args['--only'][0].split(',')
-
-        for file in onlyFiles:
-            oName = pathlib.Path(file).with_suffix('.o')
-            for oPathAndName in pathlib.Path('.').glob(f'**/{oName}'):
-                pathList.append(oPathAndName)
+        if(args['--withMake']):
+            onlyFiles = args['--only'][0].split(',')
+            for fileName in onlyFiles:
+                oName = pathlib.Path(fileName).with_suffix('.o')
+                for oPathAndName in pathlib.Path('.').glob(f"**/*{oName}"):
+                    oPathAndName = str(oPathAndName)
+                    pathList.append(oPathAndName)
+        #CMake saves object files differently
+        elif(args['--withCMake']):
+            onlyFiles = args['--only'][0].split(',')
+            for fileName in onlyFiles:
+                fileName = fileName + ".o"
+                for oPathAndName in pathlib.Path('.').glob(f"**/*{fileName}"):
+                    pathList.append(str(oPathAndName))
         #paths = [args['--path'] + name for name in oFiles]
         #pathList = paths
     else:
@@ -193,21 +294,25 @@ def gatherDumpedOFiles( fileType, outputFolder = args['--dump_at'] ):
         for filePath in pathlib.Path('.').glob('**/*.o'):
             strPath = str(filePath)
             pathList.append(strPath)
+    print(f"Gathered files: {pathList}")
     #Function can be passed to mulitple threads for parralel processing
     #chunkSize can be specified, not much performance increase
-    chunkSize = int(len(pathList) / mp.cpu_count() )
+    #chunkSize = int(len(pathList) / mp.cpu_count() )
     pool = mp.Pool(mp.cpu_count(), maxtasksperchild = 2)
-    pool.map_async(runOnFiles, pathList, callback = testCallBack)
+    func = partial(runOnFiles, fileType = extension )
+    pool.map_async(func, pathList, callback = printCallBack)
     pool.close()
     pool.join()
+    ##
     print(calledCommands)
     print(len(calledCommands))
-    #runOnFiles(pathList)
     endTime = time.time()
-    #print(printList)
-    print("Runtime: %s seconds" %(endTime - startTime))
+    print("Runtime: {duration} seconds".format(duration = (endTime - startTime)) )
 
 def checkForDifference( givenType ):
+    """OUTDATED! UNUSED!
+    Checks if there are differences in /DumpedFiles for the givenType ('asm' or 'txt') between the <fromtype> and <totype> passed to the script.
+    """
     #Checks for difference in the asembly and string output of a set of object files
     #Object files before running findent contain <fromType> in their name
     #Object files after running findent contain <toType> in their name
@@ -215,14 +320,14 @@ def checkForDifference( givenType ):
     #default "mkdir ./Diff/"
     try:
         os.mkdir(args['--diff_at'])
-    except:
+    except Exception:
         pass
     print("CHECKING DIFFERENCES")
     #File location
     fileLocation = args['--dump_at'] #default ./DumpedFiles/
     outputFolder = args['--diff_at'] #default: ./Diff/
     oldFileType = args['<fromtype>'] #example .f
-    newFileType = args['<totype>']   #example .f90
+    newFileType = args['<totype>']   #example .F90
     #givenType                        example .asm
     diffOptions = " -B -Z --strip-trailing-cr "
 
@@ -254,24 +359,69 @@ def checkForDifference( givenType ):
 def hephaestus():
     if not (args['--Hera']):
         runMakeCleanBuilt()
-        gatherDumpedOFiles(fileType = args['<fromtype>'])
+        gatherDumpedOFiles()
     else:
         print("Hephaestus did not run. Rejected by Hera for being ugly.")
 
+def renameAndClean():
+    """Runs collectPaths() for '_.F90' helper files and renames the corresponding '.f' files to have the proper '.F90' extension.
+    If '--clean' option is given it will delete the '_.F90' helper files
+    Only renames 30 files then prompts a user key stroke. Pausing is inteded to check if GitKraken or other Version Control has correctly detected a rename."""
+    paths = collectPaths(fromType = '_.F90')
+    print(f"collected paths: {paths}")
+    maxCount = 30
+    for pathName in paths:
+        if(maxCount <= 0):
+            maxCount = 30
+            #GitKraken cannot process more than 60-120 files at a time, before the changes stop being recognized as rename and become delte + create, loosing the commit history
+            input("Renaming paused. Check if Version control can handle the amount of renamed files. This is done to ensure the history of the changed files is kept.\nPress any key to continue")
+        maxCount -= 1
+        #print("PATHS: " + str(paths))
+        #pathName   = path/filename_.F90
+        #outputPath = path/filename.F90
+        #oldPath    = path/filename.f
+        outputPath = pathName[:-len("_.F90")] + ".F90"
+        oldPath = pathName[:-len("_.F90")] + ".f"
+        #Extra formatting for windows
+        pathName = pathName.replace("\\","/")
+        outputPath = outputPath.replace("\\","/")
+        oldPath = oldPath.replace("\\","/")
+        if(args['--clean']):
+            os.remove(pathName)
+        try:
+            shellArg = f"git mv {oldPath} {outputPath}"
+            sp.call(shellArg, shell=True)
+            print(shellArg)
+        except Exception:
+            print(f"Could not execute {shellArg}")
+            continue
+        try:
+            with open('./CMakeLists.txt','r') as file:
+                fileString = file.read()
+            oldFileName = os.path.basename(oldPath)
+            newFileName = os.path.basename(outputPath)
+            fileString = fileString.replace(oldFileName, newFileName)
+
+            with open('./CMakeLists.txt', 'w') as file:
+                file.write(fileString)
+
+        except FileNotFoundError:
+            warnings.war("\033[1;31;40m Could not find CMakeLists.txt make sure to update extensions of old fortran files where needed and save assembly data with hephaestus command.\n\033[0;37;40m")
+
 if __name__ == '__main__':
     if(args['convert']):
-        #Create Object files from old format types
-        runMakeCleanBuilt()
-        #Gather the assembly code and string information
-        gatherDumpedOFiles( fileType = args['<fromtype>'] )
-        filterForType()
-        #Re compile the program for new object files
-        runMakeCleanBuilt()
-        #Gather new assembly code and strings
-        gatherDumpedOFiles( fileType = args['<totype>'] )
-        #run diff between the old and new assembly files
-        checkForDifference('.asm')
-        checkForDifference('.txt')
+        if not ( pathlib.Path(args['--dump_at']).exists() ):
+            print("No dumped assembly directory detected.\nWill compile program and save assembly code")
+            hephaestus()
+        #Only convert files and save them with the same name
+        filterForType(toType = '_.F90', remove = False)
+        renameAndClean()
+        if(args['--withMake']):
+            hephaestus()
+        if(args['--withCMake']):
+            print("Please rename file extensions in CMakeLists and run the following command the save the new assembly code:\n converter9000.py hephaestus --withCMake")
+
+
 
     elif(args['sisyphus'] and args['uphill']):
         #Save assembly code if it wasn't done
@@ -280,42 +430,19 @@ if __name__ == '__main__':
             hephaestus()
 
         #Only convert files and save them with the same name
-        filterForType(toType = '_.f90', remove = False)
+        filterForType(toType = '_.F90', remove = False)
+        print("\033[1;33;40m Sisyphus uphill has completed.\n\033[0;37;40m")
+        print("\033[1;31;40m NOTE: Make sure you have staged or saved assembly differences before continuing with sisyphus downhill command \033[0;37;40m")
 
     elif(args['sisyphus'] and args['downhill']):
         if not ( pathlib.Path(args['--dump_at']).exists() ):
-            print("No dumped assembly diectory detected. Make sure it exists in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
+            print("WARNING: No dumped assembly directory detected. Make sure it exists in the given --dump_at location.\nIf you wish to compile for the first time use the hephaestus command.\nOtherwise use sisyphus uphill to format files first.")
             raise SystemExit
         #The files should be converted but kept with the same name
         #Program recompiles with new object files (assumeing old files were changed first)
         #Overwrites object files assembly and string code
-        #TODO: rename changed files to .f90
-        paths = collectPaths(fromType = '_.f90')
-        maxCount = 30
-        for pathName in paths:
-            if(maxCount <= 0):
-                maxCount = 30
-                input("Renaming paused. Check if Version control can handle the amount of renamed files.\nPress any key to continue")
-            maxCount -= 1
-            #print("PATHS: " + str(paths))
-            #pathName   = path/filename_.f90
-            #outputPath = path/filename.f90
-            #oldPath    = path/filename.f
-            outputPath = pathName[:-len("_.f90")] + ".f90"
-            oldPath = pathName[:-len("_.f90")] + ".f"
-            #Extra formatting for windows
-            pathName = pathName.replace("\\","/")
-            outputPath = outputPath.replace("\\","/")
-            oldPath = oldPath.replace("\\","/")
-            if(args['--clean']):
-                os.remove(pathName)
-            try:
-                shellArg = f"git mv {oldPath} {outputPath}"
-                sp.call(shellArg, shell=True)
-                print(shellArg)
-            except:
-                print(f"Could not execute {shellArg}")
-                continue
+        #
+        renameAndClean()
         hephaestus()
 
 

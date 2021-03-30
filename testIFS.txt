@@ -1,0 +1,46 @@
+IF (A-1. < 0) THEN
+  GOTO 90
+ELSE IF (A-1. == 0) THEN
+  GOTO 100
+ELSE
+  GOTO 120
+END IF
+
+
+BLABLABLABLA
+
+_IF (3 + C*(ABC+15)*10/5 <= 0) THEN
+   GOTO 10
+ ELSE
+   GOTO 30
+ END IF
+
+__IF(FS(IST) < 0) THEN
+    GOTO 999
+  ELSE
+    GOTO 21
+  END IF
+
+___IF(FS(IST) <= 0) THEN
+     GOTO 999
+   ELSE
+     GOTO 21
+   END IF
+
+MORe
+OF SOME FORTRAN
+CODE
+AND THEN SOME STATEMENT
+____IF(ABCD < 0) THEN
+      GOTO 10
+    ELSE
+      GOTO 20
+    END IF
+
+
+ IF(A*(B-D)/10.E-18 + 1. <= 0) THEN
+   GOTO 50
+ ELSE
+   GOTO 420
+ END IF
+
