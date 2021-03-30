@@ -69,7 +69,11 @@ python3 (path/to/codeConverter9000)/converter9000.py sisyphus .f downhill (--wit
 ### File format
 The script only works on fortran files which contain only one implicit declaration and it is before any dimension declaration.\
 **Not supported:**
-* `PARAMTER(X)` Some fortran files contain a PARAMETER declaration which is used in arrays. The script does not detect them and will write the detected DIMENSION declaration right after the `IMPLICIT` declaration. You would need to manually move the parameter declaration before the declared dimension for the file to compile.
+* `PARAMTER(X)` Some fortran files contain a PARAMETER declaration which is used in arrays. The script does not detect them and will write the detected DIMENSION declaration right after the `IMPLICIT` declaration. You would need to manually move the parameter declaration line to be before the declared dimension for the file to compile afterwards.\
+You can either open a new bash terminal or stop the existing script. After you manually change the position of the parameter declaration simply run the hephaestus command to compile and overwrite the assembly code to check for any unstaged differences of assembly files:
+```
+python3 (path/to/codeConverter9000/)converter9000.py hephaestus (--withCMake | --withMake)
+```
 
 To replace `IMPLICIT DOUBLE(A-H,O-Z)` with `IMPLICIT DOUBLE` in all your `.F90` files run:
 ```
@@ -77,7 +81,7 @@ python3 (path/to/codeConverter9000/)typeParser.py declare .F90 (--withCMake | --
 ```
 You can also declare files in a specific folder by replacing `--recursive` with
 ```
---path=your/desired/folder/
+--path=./desired/folder/
 ```
 Or further specify to declare only some files by adding:
 ```
@@ -91,10 +95,26 @@ If there aren't any, you can either commit the changes or continue.
 If there are unstaged assembly changes, they were introduced by the type declaration. Discard the changes to the file and press any key for the script to continue to the next file.
 If you had previously changed files with no assembly difference, commit those before discarding all changes.
 
-## Changing syntax of arithmetic IF statements
 
 ## Changing syntax of unsupported DO loops
+* **IMPORTANT:** The script will automatically check for assembly differences and if there are none it will make a commit with the title 'Change DO_LOOP in (filename)' where (filename) will be replaced by the name of the fortran file. It would be recommended to not run it on the mater branch but on a seperate one and squish all the DO loop changes into 1 commit afterwards.
 
+To start the script for updating the syntax of DO loops in all .`F90` files run:
+```
+python3 (path/to/codeConverter9000/)doParser.py declare .F90 (--withCMake | --withMake) --recursive
+```
+## Changing syntax of arithmetic IF statements
+For updating arithmetic IF statements, first make sure you save the inital assembly code by running
+```
+python3 (path/to/codeConverter9000/)converter9000.py hephaestus .F90 --withCMake
+```
+Then change the IF statements in the desired folders or files by running:
+```
+python3 (path/to/codeConverter9000/)ifParser.py parse .F90 --recursive
+```
+Here you can again add `--path=./somefolder/` to only change files within that folder or replace '--recursive' with `--only=filename1.F90,filename2.F90` for specific files within that folder.
+
+After the IF statements have been updated, you can stage all changes in git, and run the hephaestus command to gather the new assembly code. However, assembly changes might occur simply changing the amount of lines of the code.
 
 [1]:https://www.microsoft.com/en-us/p/ubuntu-2004-lts/9n6svws3rx71?activetab=pivot:overviewtab "Microsoft store page for Ubuntu 20.04 LTS"
 [2]:https://github.com/docopt/docopt#help-message-format "docopt github documentation page"
