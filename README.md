@@ -60,11 +60,36 @@ After comitting stage the created `.asm` assembly files. This way if there are a
 
 Next to change the extension of the `.f` files and delete the `_.F90` helper files run:
 ```
-python3 (path/to/codeConverter9000)/converter9000.py sisyphus .f downhill (--withCMake | --withMake) --clean
+python3 (path/to/codeConverter9000)/converter9000.py sisyphus .f downhill (--withCMake | --withMake) --clean --recursive
 ```
 
 
 ## Type declaring undeclared variables
+
+### File format
+The script only works on fortran files which contain only one implicit declaration and it is before any dimension declaration.\
+**Not supported:**
+* `PARAMTER(X)` Some fortran files contain a PARAMETER declaration which is used in arrays. The script does not detect them and will write the detected DIMENSION declaration right after the `IMPLICIT` declaration. You would need to manually move the parameter declaration before the declared dimension for the file to compile.
+
+To replace `IMPLICIT DOUBLE(A-H,O-Z)` with `IMPLICIT DOUBLE` in all your `.F90` files run:
+```
+python3 (path/to/codeConverter9000/)typeParser.py declare .F90 (--withCMake | --withMake) --recursive
+```
+You can also declare files in a specific folder by replacing `--recursive` with
+```
+--path=your/desired/folder/
+```
+Or further specify to declare only some files by adding:
+```
+--only=file1.f,file2.f
+```
+
+After the script has type declared a file, check if there are any unstaged assembly differences.
+
+If there aren't any, you can either commit the changes or continue.
+
+If there are unstaged assembly changes, they were introduced by the type declaration. Discard the changes to the file and press any key for the script to continue to the next file.
+If you had previously changed files with no assembly difference, commit those before discarding all changes.
 
 ## Changing syntax of arithmetic IF statements
 
