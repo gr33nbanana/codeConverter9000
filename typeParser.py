@@ -217,7 +217,7 @@ def locateAndDeclareDimensions(filestring, template, dimensionParser):
     ############################################
     return indeciesToComment
 
-def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, template, implicitDoubleParser):
+def switchToImplicitNoneStatement(filepath, fileString, dimensionCommentIdx, template, implicitDoubleParser):
     """
     Changes the IMPLICIT declaration in the provided Fortran file
     to an IMPLICIT NONE.
@@ -242,30 +242,18 @@ def switchToImplicitNoneStatement(filepath, filestring, dimensionCommentIdx, tem
             A compiled regex object which is used to parse for an "IMPLICIT DOUBLE (A-H,O-Z) type declaration in the fortran file
 
     """
-    #comment old dimension declarations in filestring and write to file
-    if(len(dimensionCommentIdx) > 0):
-        comment_accumulator = 0
-        for commentidx in dimensionCommentIdx:
-            commentidx += comment_accumulator
-            fileString = insertInString(fileString, commentidx, commentidx,"!")
-            comment_accumulator += len("!")
-
-    #NOTE: Not needed to write and read, can just continue working with fileSTring
-
-    # Now all DIMENSION lines are commented out
-    writeFileString(filepath, filestring, message= f"\nCommenting out old DIMENSION declarations")
     ###################################################
     # Re evaluate implicit declaration index just to be safe
-    fileString = readFileString(filepath, message=f"Reading {filepath} after commenting out DIMENSIONS")
+    #fileString = readFileString(filepath, message=f"Reading {filepath} after commenting out DIMENSIONS")
     #with open(filepath, 'r') as file:
     #    fileString = file.read()
     #
-    implicitDeclaration = implicitDoubleParser.search(fileString)
+    #implicitDeclaration = implicitDoubleParser.search(fileString)
     #get postiion of IMPLICIT DOUBLE PRECISION
     #contained in the first matching group
-    implicitLineStartIdx = implicitDeclaration.start(0)
-    implicitStartIdx = implicitDeclaration.start(1)
-    implicitEndIdx = implicitDeclaration.end(1)
+    #implicitLineStartIdx = implicitDeclaration.start(0)
+    #implicitStartIdx = implicitDeclaration.start(1)
+    #implicitEndIdx = implicitDeclaration.end(1)
     #################################################
 
     #Uncomment Dimension declarations
@@ -297,7 +285,7 @@ def compileForVariables(compileArgument, template, message = None):
         print(message)
 
     detectedVariables = []
-    proc = sp.Popen(compileArgs, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+    proc = sp.Popen(compileArgument, shell = True, stdout = sp.PIPE, stderr = sp.STDOUT)
     for line in proc.stdout.readlines():
         line = line.decode("utf-8")
         print(line)
@@ -406,7 +394,7 @@ if __name__ == '__main__':
         #convert9000.py hephaestus --withCMake | --withMake
         p = Path(f"{filepath}")
         #CMake has object files named filename.F90.o , need to pass that to converter9000
-        fileName = p.name + ".o"
+        fileName = p.name
         hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={fileName}"
         print(hephaestusString)
         sp.call(hephaestusString, shell = True)
@@ -416,18 +404,30 @@ if __name__ == '__main__':
         ###########################################
         sp.call("git add -A", shell = True)
 
+        #comment old dimension declarations in filestring and write to file
+        if(len(dimensionCommentIdx) > 0):
+            comment_accumulator = 0
+            for commentidx in dimensionCommentIdx:
+                commentidx += comment_accumulator
+                fileString = insertInString(fileString, commentidx, commentidx,"!")
+                comment_accumulator += len("!")
+
+        #NOTE: Not needed to write and read, can just continue working with fileSTring
+
+        # Now all DIMENSION lines are commented out
+        writeFileString(filepath, fileString, message= "\nCommenting out old DIMENSION declarations")
         #######################################################
         #Switch to IMPLICIT NONE statement
         #######################################################
         switchToImplicitNoneStatement(filepath, fileString, dimensionCommentIdx, template, implicitDoubleParser = pars_implicit_Double_declaration)
         # Re evaluate implicit declaration index
         #Optional, done just in case.
-        fileString = readFileString(filepath, message = f"Opening to read {filepath}")
+        #fileString = readFileString(filepath, message = f"Opening to read {filepath}")
         #
-        implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
-        implicitLineStartIdx = implicitDeclaration.start(0)
-        implicitStartIdx = implicitDeclaration.start(1)
-        implicitEndIdx = implicitDeclaration.end(1)
+        #implicitDeclaration = pars_implicit_Double_declaration.search(fileString)
+        #implicitLineStartIdx = implicitDeclaration.start(0)
+        #implicitStartIdx = implicitDeclaration.start(1)
+        #implicitEndIdx = implicitDeclaration.end(1)
 
         #################################################
         # Compile to gather undeclared variable names
