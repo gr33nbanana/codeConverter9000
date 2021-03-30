@@ -11,8 +11,9 @@ The required packages are:
 * [docopt][2]
 version 0.6.2
 * [findent][3] version 2.8.2
-# Installation
 
+# Installation
+Clone the repository to a desired directory. When running scripts the directory has to be provided to python3.
 # Usage
 
 ## CMake or Make
