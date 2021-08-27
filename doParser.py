@@ -437,9 +437,7 @@ if __name__ == '__main__':
                     file.write(uncommented_string)
 
                 #DEBUGGING
-                input("CHECK DO LOOP ADDRESS CHANGE AND UNCOMMENTING")
-                # print(hephaestusString)
-                # sp.call(hephaestusString, shell=True)
+                # input("CHECK DO LOOP ADDRESS CHANGE AND UNCOMMENTING")
                 #Check if program compiles
                 if(not commandExecuted( hephaestusString )):
                     print("\033[1;37;41m Program did not compile \033[0;37;40m")
