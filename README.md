@@ -6,7 +6,7 @@ The code executes bash commands for gathering assembly code and compiling. It ca
 The script uses [Git][4] for version control, renaming and checking if there are undesired assembly differences.
 
 # Python version and packages
-The script was written and teste in python 3.6.9. It is recommended to use the same version.\
+The script was written and tested in python 3.6.9. It is recommended to use the same version.\
 The required packages are:
 * [docopt][2]
 version 0.6.2
@@ -50,7 +50,7 @@ python3 (path/to/codeConverter9000)/converter9000.py sisyphus .f uphill (--withC
 You can also convert only one file in that folder by specifying ```--only=(file_name.f)```
 
 * **Using CMake**\
-If you are compiling the fortran files with CMake and you do not have a CMakeLists.txt file in the root directory, after the free formatting you have to manually go to your `CMakeLists.txt` file and update the filenames or paths with the correct new `.F90` extension. If not the next step will not be able to compile the program and overwrite the assembly code so you would have to do it manually using the `hephaestus --withCMake` command.
+If you are compiling the fortran files with CMake and you do not have a CMakeLists.txt file in the root directory, after the free formatting you have to manually go to your `CMakeLists.txt` file and update the filenames or paths with the correct new `.F90` extension. If not, the next step will not be able to compile the program and overwrite the assembly code so you would have to do it manually using the `hephaestus --withCMake` command.
 * **Using Make**\
 If you are compiling the fortran files with make, if you do not specify the `--clean` option, the helper files will not be deleted automatically and they might be compiled as well so you might get some extra assembly files.
 
