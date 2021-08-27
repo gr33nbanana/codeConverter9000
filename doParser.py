@@ -323,14 +323,14 @@ if __name__ == '__main__':
             p = Path(f"{filepath}")
             commitName = p.name
             hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={commitName}"
-            print(hephaestusString)
-            sp.call(hephaestusString, shell = True)
-            if(not commandExecuted( getMakeCommand()) ):
+            # print(hephaestusString)
+            # sp.call(hephaestusString, shell = True)
+            if(not commandExecuted( hephaestusString ) ):
                 # Move to next file
                 print("Program did not compile")
                 print('\a')
                 input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-                break
+                continue
 
             gitCommentStageArg = "git add -A"
             print("\033[1;32;40m " + gitCommentStageArg + "\033[0;37;40m")
@@ -349,21 +349,24 @@ if __name__ == '__main__':
                 print(f"\033[1;35;47m Updating DO statements in: {filepath} \033[0;37;40m")
                 file.write(uncommented_string)
             # input("CHECKPOINT CHECK UNCOMMENTED DO LOOPS")
-            print(hephaestusString)
-            sp.call(hephaestusString, shell=True)
-            if(not commandExecuted( getMakeCommand()) ):
+            # print(hephaestusString)
+            # sp.call(hephaestusString, shell=True)
+            if(not commandExecuted( hephaestusString ) ):
                 # Move to next file
                 print("\033[1;37;41m Program did not compile \033[0;37;40m")
                 print('\a')
                 input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-                break
+                continue
 
             if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
                 # Move to next file
                 print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
                 print('\a')
                 input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-                break
+                continue
+            else:
+                print("\033[1;32;40m " + "No assembly difference detected" + "\033[0;37;40m")
+            
             commitOnlyOneFile(filepath, message = f"Change DO_LOOPs in {commitName}")
             #Wait 5 seconds just in case, for gitKraken to register any asm code change
             time.sleep(5)
@@ -404,8 +407,8 @@ if __name__ == '__main__':
                 # Move to next file
                 print("Program did not compile")
                 print('\a')
-                input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-                break
+                input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next loop")
+                continue
 
             #Stage all differences from adding comments - meaningless .asm differences
             gitCommentStageArg = "git add -A"
@@ -449,7 +452,10 @@ if __name__ == '__main__':
                     print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
                     print('\a')
                     input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-                    break
+                    continue
+                else:
+                    print("\033[1;32;40m " + "No assembly difference detected" + "\033[0;37;40m")
+
 
                 #Commit DO loop change, and then stage again all differences created after comments were added
                 commitOnlyOneFile(filepath, message = f"Change DO_LOOP in {commitName}")
