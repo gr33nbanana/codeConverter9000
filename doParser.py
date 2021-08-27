@@ -332,9 +332,9 @@ if __name__ == '__main__':
                 input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
                 break
 
-            gitCommentCommitArg = "git add -A"
-            print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
-            sp.call(gitCommentCommitArg, shell=True)
+            gitCommentStageArg = "git add -A"
+            print("\033[1;32;40m " + gitCommentStageArg + "\033[0;37;40m")
+            sp.call(gitCommentStageArg, shell=True)
             ##################################################################
             # Write uncommented DO LOOP to file
             ##################################################################
@@ -407,10 +407,11 @@ if __name__ == '__main__':
                 input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
                 break
 
-            gitCommentCommitArg = "git add -A"
-            print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
-            sp.call(gitCommentCommitArg, shell=True)
-            ########################################
+            #Stage all differences from adding comments - meaningless .asm differences
+            gitCommentStageArg = "git add -A"
+            print("\033[1;32;40m " + gitCommentStageArg + "\033[0;37;40m")
+            sp.call(gitCommentStageArg, shell=True)
+
             #Uncomment one END DO statement at a time
             flagEND_DO = " END DO\n"
             doidx = []
@@ -450,9 +451,13 @@ if __name__ == '__main__':
                     input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
                     break
 
+                #Commit DO loop change, and then stage again all differences created after comments were added
                 commitOnlyOneFile(filepath, message = f"Change DO_LOOP in {commitName}")
                 #Wait 5 seconds just in case, for gitKraken to register any asm code change
                 time.sleep(5)
+                print("\033[1;32;40m " + gitCommentStageArg + "\033[0;37;40m")
+                sp.call(gitCommentStageArg, shell=True)
+
 
 
 # TODO :: Make checking one loop at a time an option
