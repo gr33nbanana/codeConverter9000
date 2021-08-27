@@ -428,7 +428,7 @@ if __name__ == '__main__':
                 commentStartIdx = idxPair[2][1] + uncommented_string[idxPair[2][1]: ].find('\n') + 1
                 #Global index of newline after !END DO
                 commentEndIdx = commentStartIdx + uncommented_string[commentStartIdx: ].find('\n') + 1
-                #Replace '!END DO' with 'END DO'. Must preserve total string length
+                #Replace '!END DO' with ' END DO'. Must preserve total string length
                 uncommented_string = insertInString(uncommented_string, commentStartIdx, commentEndIdx, flagEND_DO)
 
                 #Write individual Do loop change
