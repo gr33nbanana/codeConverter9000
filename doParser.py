@@ -412,7 +412,7 @@ if __name__ == '__main__':
             sp.call(gitCommentCommitArg, shell=True)
             ########################################
             #Uncomment one END DO statement at a time
-            flagEND_DO = "END DO\n"
+            flagEND_DO = " END DO\n"
             doidx = []
             getDoRegexIndecies(regex, commented_string,doidx)
             uncommented_string = commented_string
