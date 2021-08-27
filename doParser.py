@@ -1,7 +1,7 @@
 """DoParser.py
 
 Usage:
-  doParser.py declare <extension> (--withMake | --withCMake) [--path=<location> --version_Control_Command=<vc_add>] [--recursive | --only=<filename>...]
+  doParser.py declare <extension> (--withMake | --withCMake) [--path=<location> --version_Control_Command=<vc_add>] [--recursive | --only=<filename>... --exhaustive]
 
 Commands:
   declare         Glob for the specified extension files and update DO LOOP for any file which uses the old DO 20 ... 20 last line syntax for DO LOOPS
@@ -9,17 +9,19 @@ Arguments:
   <extension>     Extension of files to declare variablse of. Should be '.f' or '.F90'
   <filename>      Name of the file to parse for DO LOOPS including the extension
 Options:
-  -p --path=<>    The path of the folder or files to change DO LOOPS in. Include last forward slash './path/to/folder/' [default: ./]
+  -p --path=<>              The path of the folder or files to change DO LOOPS in. Include last forward slash './path/to/folder/' [default: ./]
 
   --version_Control_Command=<>  Terminal command to execute in order to stage changes to .asm files when needed [default: git add -A]
 
-  -r --recursive  If specified the program will run recursively
+  -r --recursive            If specified the program will run recursively
 
   -o --only <name1,name2>   Only convert the given files or files seperated by comma. Include file extension. For example '-o file1.txt,file2.cpp,file3.f...'
 
   --withMake                Specify if you want to also run a make command to build the project, compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
 
   --withCMake              Specify if the files are built using CMake instead of make. compiling any changed file. Should be careful if running it with sisyphus downhill as if helper '_.f90' files are not deleted they will compile and create redundant object files. [default: False]
+
+  --exhaustive             Check for assembly difference after each DO LOOP has been changed individually.[default: False]
 """
 import fnmatch
 import warnings
@@ -96,22 +98,20 @@ def collectPaths(location = args['--path'], fromType = args['<extension>']):
 			raise SystemExit
 	return paths
 
-def compileAndCheck(makeStr):
+def commandExecuted(makeStr):
     """
-    Compiles the program using the given makeStr as a command line
-    and parses through the terminal output. If it detects '100%' and
-    'watchdog' the program has compiled and returns True. Otherwise
-    it returns False
+    Runs the given makeStr as a command line with a subprocess.
+    If the subprocess returns without an error returns True. Otherwise returns False
 
     Parameters
     ----------
         makeStr : str
-            bash command line to compile the program
+            bash command line to run as subprocess
 
     Returns
     -------
         bool
-            True of '100%' and 'watchdog' were printed on the terminal
+            True if subprocess executes without error and returns code 0
             False otherwise
     """
     print(makeStr)
@@ -221,7 +221,7 @@ def insertStrAtIndecies(stringToInsert, originalString, listOfPositions, newLine
         originalString : str
             String into which a new one will be inserted at all the indecies in the
             list of indecies
-        listOfPositions : list : int
+        listOfPositions : list of int
             List of integers, representing the string index at which a desired
             string should be added. Desired string is concatenated to the original
             string at the given index position
@@ -293,125 +293,217 @@ def getDoRegexIndecies(regex, givenString, storingList, globalIdx = 0):
 
 if __name__ == '__main__':
     filesToDeclare = collectPaths()
-    for filepath in filesToDeclare:
-        with open(filepath, 'r') as file:
-            ###### Read initial file string #######
-            print(f"\nOpening to read:{filepath}")
-            test_str = file.read()
-            print(f"Closed {filepath}")
+    if(not args['--exhaustive']):
+        for filepath in filesToDeclare:
+            with open(filepath, 'r') as file:
+                ###### Read initial file string #######
+                print(f"\nOpening to read:{filepath}")
+                test_str = file.read()
+                print(f"Closed {filepath}")
 
-        doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
-        #Group 1 -- indentation
-        #Group 2 -- first Address of DO LOOP
-        #Group 3 -- exit Address of DO LOOP
-        if(type(doLoopExists) == type(None)):
-            print(f"No old syntax DO LOOP detected in: {filepath}")
-            continue
+            doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
+            if(type(doLoopExists) == type(None)):
+                print(f"No old syntax DO LOOP detected in: {filepath}")
+                continue
 
-        doidx = []
-        #Get positions of all old DO statements
-        getDoRegexIndecies(regex, test_str, doidx)
-        flagCommentEND_DO = "!END DO\n"
-        doidxPairs        = [pair[2][1] for pair in doidx ]
-        commented_string  = insertStrAtIndecies(flagCommentEND_DO, test_str, doidxPairs, newLine = True)
-        with open(filepath, 'w') as file:
-            #Write comments to file
-            print(f"\033[1;35;42m Writing Comments to: {filepath} \033[0;37;40m")
-            file.write(commented_string)
+            doidx = []
+            #Get positions of all old DO statements
+            #Group 1 -- indentation
+            #Group 2 -- first Address of DO LOOP
+            #Group 3 -- exit Address of DO LOOP
+            getDoRegexIndecies(regex, test_str, doidx)
+            flagCommentEND_DO = "!END DO\n"
+            doidxPairs        = [pair[2][1] for pair in doidx ]
+            commented_string  = insertStrAtIndecies(flagCommentEND_DO, test_str, doidxPairs, newLine = True)
+            with open(filepath, 'w') as file:
+                #Write comments to file
+                print(f"\033[1;35;42m Writing Comments to: {filepath} \033[0;37;40m")
+                file.write(commented_string)
 
-        p = Path(f"{filepath}")
-        commitName = p.name
-        hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={commitName}"
-        print(hephaestusString)
-        sp.call(hephaestusString, shell = True)
-        if(not compileAndCheck( getMakeCommand() )):
-            # Move outside of function
-            print("Program did not compile")
-            print('\a')
-            input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-            break
+            p = Path(f"{filepath}")
+            commitName = p.name
+            hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={commitName}"
+            print(hephaestusString)
+            sp.call(hephaestusString, shell = True)
+            if(not commandExecuted( getMakeCommand()) ):
+                # Move to next file
+                print("Program did not compile")
+                print('\a')
+                input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+                break
 
-        gitCommentCommitArg = "git add -A"
-        print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
-        sp.call(gitCommentCommitArg, shell=True)
-        ##################################################################
-        # Write uncommented DO LOOP to file
-        ##################################################################
-        flagEND_DO = 'END DO\n'
-        for idxPair in doidx:
-            # For each pair, Replace first Address with whiteSpace
-            test_str = insertInString(test_str, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
+            gitCommentCommitArg = "git add -A"
+            print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
+            sp.call(gitCommentCommitArg, shell=True)
+            ##################################################################
+            # Write uncommented DO LOOP to file
+            ##################################################################
+            flagEND_DO = 'END DO\n'
+            for idxPair in doidx:
+                # For each pair, Replace first Address with whiteSpace
+                # Preserves total string length
+                test_str = insertInString(test_str, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
 
-        uncommented_string = insertStrAtIndecies(flagEND_DO, test_str, doidxPairs, newLine = True)
-        with open(filepath, 'w') as file:
-            print(f"\033[1;35;47m Updating DO statements in: {filepath} \033[0;37;40m")
-            file.write(uncommented_string)
-        input("CHECKPOINT CHECK UNCOMMENTED DO LOOPS")
-        print(hephaestusString)
-        sp.call(hephaestusString, shell=True)
-        if(not compileAndCheck( getMakeCommand() )):
-            print("\033[1;37;41m Program did not compile \033[0;37;40m")
-            print('\a')
-            input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-            break
+            uncommented_string = insertStrAtIndecies(flagEND_DO, test_str, doidxPairs, newLine = True)
+            with open(filepath, 'w') as file:
+                print(f"\033[1;35;47m Updating DO statements in: {filepath} \033[0;37;40m")
+                file.write(uncommented_string)
+            # input("CHECKPOINT CHECK UNCOMMENTED DO LOOPS")
+            print(hephaestusString)
+            sp.call(hephaestusString, shell=True)
+            if(not commandExecuted( getMakeCommand()) ):
+                # Move to next file
+                print("\033[1;37;41m Program did not compile \033[0;37;40m")
+                print('\a')
+                input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+                break
 
-        if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
-            print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
-            print('\a')
-            input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-            break
-        commitOnlyOneFile(filepath, message = f"Change DO_LOOPs in {commitName}")
-        #Wait 5 seconds just in case, for gitKraken to register any asm code change
-        time.sleep(5)
-        # TODO :: Make checking one loop at a time an option
-        #################################################################
-        ### CHECKING ONE DO LOOP AT A TIME
-        ###################################################################
-        # #accumulator = 0
-        # #####
-        # with open(filepath, 'r') as file:
-        #     print(f"\nOpening to read:{filepath}")
-        #     test_str = file.read()
-        #     print(f"Closed {filepath}")
-        # # test_str contains all commented out END DO, line number doesn't change after this
-        # doidx = []
-        # getDoRegexIndecies(regex, test_str, doidx)
-        # # For each pair, add unindented END DO
-        # for idxPair in doidx:
-        #     #Replace first Address with whiteSpace
-        #     test_str = insertInString(test_str, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
-        #     #Write END DO statement on a newline after the DO LOOP label
-        #     newLineidx = test_str[idxPair[2][1]: ].find('\n') + 1
-        #     test_str = insertInString(test_str, idxPair[2][1] + newLineidx, idxPair[2][1] + newLineidx + test_str[idxPair[2][1] + newLineidx:].find('\n'), " "+flagEND_DO)
-        #     # test_str = insertStrAtIndecies(idxPair[0] + flagEND_DO, test_str, [idxPair[2][1]], newLine = True)
-        #
-        #     ################ FUNCTION ########################
-        #     with open(filepath, 'w') as file:
-        #         print(f"\033[1;35;47m Updating DO statement in: {filepath} \033[0;37;40m")
-        #         file.write(test_str)
-        #     ###################################################
-        #     #input("CHECK HOW WELL THE COMMENTED END DO WAS REPLACED")
-        #     #Save new assembly code after chaning DO LOOP
-        #     print(hephaestusString)
-        #     sp.call(hephaestusString, shell=True)
-        #     #Check if program compiles
-        #     #
-        #     if(not compileAndCheck( getMakeCommand() )):
-        #         print("\033[1;37;41m Program did not compile \033[0;37;40m")
-        #         print('\a')
-        #         input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-        #         break
-        #
-        #     #Call GIT STATUS to check if there is assembly difference
-        #     #Check for .asm after "changes not staged for commit:"
-        #     if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
-        #         print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
-        #         print('\a')
-        #         input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
-        #         break
-        #     #Git commit -- this is after DO loop has been changed
-        #     #Dirty way to just get ike/subfolder/filename.F90 for example
-        #     #dirtyFilePath = filepath[filepath.index("athlet-cd/") + len("athlet-cd/"):]
-        #     commitOnlyOneFile(filepath, message = f"Change DO_LOOP in {commitName}")
-        #     #Wait 5 seconds just in case, for gitKraken to register any asm code change
-        #     time.sleep(5)
+            if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
+                # Move to next file
+                print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
+                print('\a')
+                input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+                break
+            commitOnlyOneFile(filepath, message = f"Change DO_LOOPs in {commitName}")
+            #Wait 5 seconds just in case, for gitKraken to register any asm code change
+            time.sleep(5)
+    else:
+        for filepath in filesToDeclare:
+            # Add all !END DO comments at the same time
+            with open(filepath, 'r') as file:
+                ###### Read initial file string #######
+                print(f"\nOpening to read:{filepath}")
+                test_str = file.read()
+                print(f"Closed {filepath}")
+
+            doLoopExists = re.search(regex, test_str, re.MULTILINE | re.IGNORECASE)
+            if (type(doLoopExists) == type(None)):
+                print(f"No old syntax DO LOOP detected in: {filepath}")
+                continue
+
+            doidx = []
+            # Get positions of all old DO statements
+            # Group 1 -- indentation
+            # Group 2 -- first Address of DO LOOP
+            # Group 3 -- exit Address of DO LOOP
+            getDoRegexIndecies(regex, test_str, doidx)
+            flagCommentEND_DO = "!END DO\n"
+            doidxPairs = [pair[2][1] for pair in doidx]
+            commented_string = insertStrAtIndecies(flagCommentEND_DO, test_str, doidxPairs, newLine=True)
+            with open(filepath, 'w') as file:
+                # Write comments to file
+                print(f"\033[1;35;42m Writing Comments to: {filepath} \033[0;37;40m")
+                file.write(commented_string)
+
+            p = Path(f"{filepath}")
+            commitName = p.name
+            hephaestusString = f"python3 ~/development/codeConverter9000/converter9000.py hephaestus --withCMake --only={commitName}"
+            # print(hephaestusString)
+            # sp.call(hephaestusString, shell=True)
+            if (not commandExecuted( hephaestusString )):
+                # Move to next file
+                print("Program did not compile")
+                print('\a')
+                input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+                break
+
+            gitCommentCommitArg = "git add -A"
+            print("\033[1;32;40m " + gitCommentCommitArg + "\033[0;37;40m")
+            sp.call(gitCommentCommitArg, shell=True)
+            ########################################
+            #Uncomment one END DO statement at a time
+            flagEND_DO = "END DO\n"
+            doidx = []
+            getDoRegexIndecies(regex, commented_string,doidx)
+            uncommented_string = commented_string
+            for idxPair in doidx:
+                # For each pair, Replace first Address with whiteSpace
+                # Must preserves total string length
+                uncommented_string = insertInString(uncommented_string, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
+                #Global index of line start of !END DO
+                commentStartIdx = idxPair[2][1] + uncommented_string[idxPair[2][1]: ].find('\n') + 1
+                #Global index of newline after !END DO
+                commentEndIdx = commentStartIdx + uncommented_string[commentStartIdx: ].find('\n') + 1
+                #Replace '!END DO' with 'END DO'. Must preserve total string length
+                uncommented_string = insertInString(uncommented_string, commentStartIdx, commentEndIdx, flagEND_DO)
+
+                #Write individual Do loop change
+                with open(filepath, 'w') as file:
+                    print(f"\033[1;35;47m Updating DO statement in: {filepath} \033[0;37;40m")
+                    file.write(uncommented_string)
+
+                #DEBUGGING
+                input("CHECK DO LOOP ADDRESS CHANGE AND UNCOMMENTING")
+                # print(hephaestusString)
+                # sp.call(hephaestusString, shell=True)
+                #Check if program compiles
+                if(not commandExecuted( hephaestusString )):
+                    print("\033[1;37;41m Program did not compile \033[0;37;40m")
+                    print('\a')
+                    input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next DO LOOP")
+                    continue
+
+                #Check for .asm after "changes not staged for commit:"
+                if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
+                    print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
+                    print('\a')
+                    input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+                    break
+
+                commitOnlyOneFile(filepath, message = f"Change DO_LOOP in {commitName}")
+                #Wait 5 seconds just in case, for gitKraken to register any asm code change
+                time.sleep(5)
+
+
+# TODO :: Make checking one loop at a time an option
+#################################################################
+### CHECKING ONE DO LOOP AT A TIME
+###################################################################
+# #accumulator = 0
+# #####
+# with open(filepath, 'r') as file:
+#     print(f"\nOpening to read:{filepath}")
+#     test_str = file.read()
+#     print(f"Closed {filepath}")
+# # test_str contains all commented out END DO, line number doesn't change after this
+# doidx = []
+# getDoRegexIndecies(regex, test_str, doidx)
+# # For each pair, add unindented END DO
+# for idxPair in doidx:
+#     #Replace first Address with whiteSpace
+#     test_str = insertInString(test_str, idxPair[1][0], idxPair[1][1], " "*(idxPair[1][1] - idxPair[1][0]))
+#     #Write END DO statement on a newline after the DO LOOP label
+#     newLineidx = test_str[idxPair[2][1]: ].find('\n') + 1
+#     test_str = insertInString(test_str, idxPair[2][1] + newLineidx, idxPair[2][1] + newLineidx + test_str[idxPair[2][1] + newLineidx:].find('\n'), " "+flagEND_DO)
+#     # test_str = insertStrAtIndecies(idxPair[0] + flagEND_DO, test_str, [idxPair[2][1]], newLine = True)
+#
+#     ################ FUNCTION ########################
+#     with open(filepath, 'w') as file:
+#         print(f"\033[1;35;47m Updating DO statement in: {filepath} \033[0;37;40m")
+#         file.write(test_str)
+#     ###################################################
+#     #input("CHECK HOW WELL THE COMMENTED END DO WAS REPLACED")
+#     #Save new assembly code after chaning DO LOOP
+#     print(hephaestusString)
+#     sp.call(hephaestusString, shell=True)
+#     #Check if program compiles
+#     #
+#     if(not commandExecuted( getMakeCommand() )):
+#         print("\033[1;37;41m Program did not compile \033[0;37;40m")
+#         print('\a')
+#         input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+#         break
+#
+#     #Call GIT STATUS to check if there is assembly difference
+#     #Check for .asm after "changes not staged for commit:"
+#     if( detectUnstagedDifference("git status", "DumpedFiles", ".asm") ):
+#         print("\033[1;37;41m Detected assembly difference \033[0;37;40m")
+#         print('\a')
+#         input(f"Remove staged and unstaged changes from {commitName}. Press any key to continue to next file")
+#         break
+#     #Git commit -- this is after DO loop has been changed
+#     #Dirty way to just get ike/subfolder/filename.F90 for example
+#     #dirtyFilePath = filepath[filepath.index("athlet-cd/") + len("athlet-cd/"):]
+#     commitOnlyOneFile(filepath, message = f"Change DO_LOOP in {commitName}")
+#     #Wait 5 seconds just in case, for gitKraken to register any asm code change
+#     time.sleep(5)
