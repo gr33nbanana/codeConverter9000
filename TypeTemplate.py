@@ -120,7 +120,7 @@ class TypeTemplate:
             warnings.warn(f"Warning variable {varName} is not present in the template. Cannot remove from template.")
 #
     def determineType(self, varName):
-        """Deterines the index in the template list for the given variable.
+        """Determines the index in the template list for the given variable.
         0 - implicit double declaration
         1 - implicit none declaration
         2 - INTEGER(4)
